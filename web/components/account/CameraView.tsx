@@ -3,7 +3,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { API_BASE } from "@/lib/config";
 import { supabase } from "@/lib/supabase";
 
-type CameraEvent = { id:string; created_at:string; status:string; source?:string; analysis?:{type?:string;severity?:string;confidence?:number;summary?:{en?:string}}; error?:string };
 type AlertItem = { id:string; lat:number; lng:number; type:string; message?:{en?:string}; count?:number; unverified?:boolean };
 type CameraStatus = { connected:boolean; capture_fps:number; target_fps:number; width:number; height:number; frames:number; drops:number; updated_at:number; viewers:number; max_viewers:number };
 type Tracking = { people:Array<{id:number;x:number;y:number;w:number;h:number;label:string}>; candidates:Array<{ids:number[];reason:string}>; frames_in_memory?:number; updated_at?:number; stale?:boolean };
@@ -14,7 +13,7 @@ function distanceKm(lat1:number,lng1:number,lat2:number,lng2:number){const r=Mat
 export function CameraView(){
   const [streamUrl,setStreamUrl]=useState<string|null>(null),[streamState,setStreamState]=useState<"connecting"|"live"|"offline">("connecting");
   const [message,setMessage]=useState("Authorizing secure camera stream…"),[quality,setQuality]=useState<Quality>("smooth"),[retry,setRetry]=useState(0);
-  const [cameraStatus,setCameraStatus]=useState<CameraStatus|null>(null),[events,setEvents]=useState<CameraEvent[]>([]),[alerts,setAlerts]=useState<AlertItem[]>([]);
+  const [cameraStatus,setCameraStatus]=useState<CameraStatus|null>(null),[alerts,setAlerts]=useState<AlertItem[]>([]);
   const [position,setPosition]=useState<{lat:number;lng:number}|null>(null),[locationStatus,setLocationStatus]=useState("Showing all alerts. Location permission is optional.");
   const videoBox=useRef<HTMLDivElement>(null);
   const [tracking,setTracking]=useState<Tracking>({people:[],candidates:[]});
@@ -37,12 +36,6 @@ export function CameraView(){
     const refresh=async()=>{try{const headers=await sessionHeaders();const response=await fetch(`${API_BASE}/api/camera/status`,{headers,cache:"no-store"});if(response.ok&&!stopped)setCameraStatus(await response.json());}catch{/* Stream error UI remains authoritative. */}};
     void refresh();const timer=window.setInterval(()=>void refresh(),2000);return()=>{stopped=true;window.clearInterval(timer);};
   },[sessionHeaders]);
-
-  useEffect(()=>{
-    let stopped=false;
-    const refreshActivity=async()=>{try{const [reports,latest]=await Promise.all([fetch(`${API_BASE}/api/reports?hours=24`,{cache:"no-store"}),fetch(`${API_BASE}/api/alerts`,{cache:"no-store"})]);if(reports.ok){const rows:CameraEvent[]=await reports.json();if(!stopped)setEvents(rows.filter(r=>r.source==="camera").slice(0,30));}if(latest.ok){const rows:AlertItem[]=await latest.json();if(!stopped)setAlerts(rows.slice(0,50));}}catch{/* Camera stream remains available if activity APIs fail. */}};
-    void refreshActivity();const timer=window.setInterval(()=>void refreshActivity(),10000);return()=>{stopped=true;window.clearInterval(timer);};
-  },[]);
 
   useEffect(()=>{
     let stopped=false;
@@ -74,7 +67,6 @@ export function CameraView(){
       <div className="mt-3 flex flex-wrap gap-2 text-xs text-mist"><span>Visible tracks: {tracking.people.length}</span><span>Rolling frames: {tracking.frames_in_memory??0}</span><span>{tracking.candidates.length ? "Motion review required · not confirmed hitting" : "No motion candidates"}</span></div>
       <p className="mt-3 text-xs text-mist">Authenticated MJPEG preview. The browser receives no Supabase token in the URL; pausing AI does not stop video. Actual latency and sustainable FPS must be measured on the Raspberry Pi.</p>
     </section>
-    <section className="rounded-2xl border border-foam/15 bg-deep p-5"><h2 className="text-xl font-semibold">AI detection log</h2><p className="my-2 text-sm text-mist">Classification, confidence and model-generated summaries—not hidden model reasoning.</p><div className="max-h-80 space-y-2 overflow-y-auto">{events.length?events.map(e=><div key={e.id} className="rounded-lg bg-abyss p-3 text-sm"><div className="font-semibold text-cyan">{e.created_at} · {e.status} · {e.analysis?.type||"Not classified"}</div><div className="text-mist">Severity: {e.analysis?.severity||"—"} · Confidence: {typeof e.analysis?.confidence==="number"?Math.round(e.analysis.confidence*100)+"%":"—"}</div><p>{e.analysis?.summary?.en||e.error||"Waiting for analysis"}</p></div>):<p className="text-sm text-mist">No camera analysis recorded.</p>}</div></section>
     <section className="rounded-2xl border border-foam/15 bg-deep p-5"><h2 className="text-xl font-semibold">Nearby community alerts</h2><button type="button" onClick={requestLocation} className="my-3 rounded-lg bg-cyan px-4 py-2 font-semibold text-abyss">Use my location</button><p className="mb-3 text-sm text-mist">{locationStatus}</p><div className="space-y-2">{shown.length?shown.slice(0,15).map(a=><div key={a.id} className="rounded-lg bg-abyss p-3 text-sm"><span className="font-semibold text-cyan">{a.type}</span> · {a.count??0} reports<p>{a.message?.en||"Community alert"}</p><p className="text-xs text-mist">{a.unverified?"Unverified camera detection":"Community-sourced; not independently verified"}</p></div>):<p className="text-sm text-mist">No matching alerts.</p>}</div></section>
   </div>;
 }
