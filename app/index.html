@@ -94,6 +94,7 @@
   @keyframes ring { from { transform: scale(.6); opacity: .8; } to { transform: scale(2.2); opacity: 0; } }
   .pin.an { animation: pulse 1.4s ease-in-out infinite; box-shadow: 0 0 0 5px rgb(127 140 168 / .2), 0 0 12px var(--c); }
   @keyframes pulse { 50% { opacity: .4; } }
+  .osm-dark { filter: invert(1) hue-rotate(180deg) brightness(.85) contrast(.9); }
   .me { width: 16px; height: 16px; border-radius: 50%; background: var(--electric); border: 3px solid #fff; box-shadow: 0 0 0 6px rgb(40 104 255 / .3); }
   .pick { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--cyan); background: rgb(101 217 242 / .3); }
   .leaflet-popup-content-wrapper, .leaflet-popup-tip { background: rgb(6 21 47 / .85); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
@@ -198,7 +199,16 @@ if (!reporterId) { reporterId = "w_" + Math.random().toString(36).slice(2, 10); 
 
 // --- map ---
 const map = L.map("map", { zoomControl: false }).setView([25.7617, -80.1918], 12);
-L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", { maxZoom: 19, subdomains: "abcd", attribution: "© OpenStreetMap © CARTO" }).addTo(map);
+const ESRI = "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/";
+const esri = [L.tileLayer(ESRI + "World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}", { maxNativeZoom: 16, maxZoom: 19, attribution: "Esri" }),
+  L.tileLayer(ESRI + "World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}", { maxNativeZoom: 16, maxZoom: 19 })];
+esri.forEach(l => l.addTo(map));
+let tileErrors = 0;
+esri.forEach(l => l.on("tileerror", () => {   // Esri unreachable -> plain OSM, darkened with a CSS filter
+  if (++tileErrors !== 4) return;
+  esri.forEach(x => map.removeLayer(x));
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, className: "osm-dark", attribution: "© OpenStreetMap" }).addTo(map);
+}));
 const markers = {};
 let reports = [], lastAlert = null, lastTide = null, me = null, meMarker = null, repPos = null, pickMarker = null;
 
