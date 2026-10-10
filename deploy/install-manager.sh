@@ -7,40 +7,33 @@ if [[ ! -f "$REPO_DIR/manager/server.py" ]]; then
   exit 1
 fi
 sudo apt-get update
-sudo apt-get install -y python3 git ca-certificates curl
+sudo apt-get install -y python3 python3-tk git ca-certificates curl
 
 DEPLOY_USER="${SUDO_USER:-$(id -un)}"
 if [[ "$DEPLOY_USER" == root ]]; then echo "Run this installer as the regular Pi Git account, not as root." >&2; exit 1; fi
 sudo install -d -m 0755 -o "$DEPLOY_USER" -g "$(id -gn "$DEPLOY_USER")" /var/lib/hackformiami-update
 
-sudo tee /etc/systemd/system/hackformiami-manager.service >/dev/null <<'SERVICE'
-[Unit]
-Description=HackForMiami Private Raspberry Pi Manager
-After=network-online.target
-Wants=network-online.target
-
-[Service]
-Type=simple
-User=www-data
-Group=www-data
-WorkingDirectory=/opt/hackformiami
-Environment=PYTHONDONTWRITEBYTECODE=1
-Environment=HFM_REPO=/opt/hackformiami
-ExecStart=/usr/bin/python3 -B /opt/hackformiami/manager/server.py
-Restart=on-failure
-RestartSec=5
-NoNewPrivileges=true
-PrivateTmp=true
-ProtectHome=true
-ProtectSystem=strict
-ProtectKernelTunables=true
-ProtectControlGroups=true
-RestrictAddressFamilies=AF_INET AF_UNIX
-ReadOnlyPaths=/opt/hackformiami
-
-[Install]
-WantedBy=multi-user.target
-SERVICE
+# The desktop manager runs in the user's graphical login, never as a web server.
+sudo systemctl disable --now hackformiami-manager.service 2>/dev/null || true
+sudo rm -f /etc/systemd/system/hackformiami-manager.service
+mkdir -p "$HOME/.local/share/applications" "$HOME/.config/autostart" "$HOME/.local/bin"
+cat > "$HOME/.local/bin/hackformiami-manager" <<'LAUNCH'
+#!/usr/bin/env bash
+exec /usr/bin/python3 -B /opt/hackformiami/manager/desktop.py
+LAUNCH
+chmod +x "$HOME/.local/bin/hackformiami-manager"
+cat > "$HOME/.local/share/applications/hackformiami-manager.desktop" <<EOF
+[Desktop Entry]
+Type=Application
+Name=HackForMiami Manager
+Comment=Local Raspberry Pi organizer console
+Exec=$HOME/.local/bin/hackformiami-manager
+Icon=utilities-system-monitor
+Terminal=false
+Categories=Utility;Development;
+StartupNotify=true
+EOF
+cp "$HOME/.local/share/applications/hackformiami-manager.desktop" "$HOME/.config/autostart/hackformiami-manager.desktop"
 
 sudo install -m 0755 "$REPO_DIR/deploy/auto-update.sh" /usr/local/bin/hackformiami-auto-update
 sudo install -m 0755 "$REPO_DIR/deploy/post-update.sh" /usr/local/bin/hackformiami-post-update
@@ -73,9 +66,7 @@ Unit=hackformiami-update.service
 WantedBy=timers.target
 TIMER
 sudo systemctl daemon-reload
-sudo systemctl enable --now hackformiami-manager
-sudo systemctl restart hackformiami-manager
 sudo systemctl enable --now hackformiami-update.timer
 sudo systemctl start hackformiami-update.service
-echo "Manager installed. Local check: curl http://127.0.0.1:8787/health"
-echo "Configure Cloudflare Tunnel to HTTP://localhost:8787 and require Cloudflare Access."
+echo "Desktop manager installed. Launch from Applications > HackForMiami Manager, or run: ~/.local/bin/hackformiami-manager"
+echo "The app autostarts at desktop login. The Cloudflare Tunnel is reserved for your future public site."
