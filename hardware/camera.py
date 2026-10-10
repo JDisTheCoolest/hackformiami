@@ -31,7 +31,7 @@ import requests
 
 SERVER_URL = os.getenv("SERVER_URL", "http://localhost:8000").rstrip("/")
 INTERVAL = max(10.0, float(os.getenv("INTERVAL", "10")))          # seconds; free Gemma tier has rate limits
-PREVIEW_INTERVAL = max(1.0, float(os.getenv("PREVIEW_INTERVAL", "2")))
+PREVIEW_INTERVAL = max(0.5, float(os.getenv("PREVIEW_INTERVAL", "0.5")))
 REPORTER_ID = os.getenv("REPORTER_ID", "pi-cam-1")
 LAT = float(os.getenv("CAM_LAT", "25.7650"))            # where the camera is mounted
 LNG = float(os.getenv("CAM_LNG", "-80.1880"))
@@ -215,6 +215,8 @@ def capture_frame(path: Path) -> bytes | None:
 
 
 def main():
+    from local_tracking import PersonTracker
+    tracker = PersonTracker(history=20)  # most recent ~10 s at 2 FPS; RAM only
     print(f"Camera {REPORTER_ID} at {AREA} ({LAT}, {LNG}) -> preview every {PREVIEW_INTERVAL:.0f}s; AI every {INTERVAL:.0f}s")
     last_hash = None
     last_analysis = 0.0
@@ -223,6 +225,15 @@ def main():
     while True:
         started = time.time()
         image = capture_frame(shot)
+        if image:
+            try:
+                observation = tracker.update(image)
+                if observation["candidates"]:
+                    print("Motion review candidates (not confirmed fighting):", observation["candidates"], flush=True)
+                if int(time.monotonic()) % 10 == 0:
+                    print("Local tracking:", observation["people"], "frames in RAM:", observation["frames_in_memory"], flush=True)
+            except (ImportError, Exception) as exc:
+                print("Local tracking unavailable:", str(exc)[:150], flush=True)
         if image:
             due = time.monotonic() - last_analysis >= INTERVAL
             busy = analysis_thread is not None and analysis_thread.is_alive()
