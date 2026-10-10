@@ -35,6 +35,8 @@ StartupNotify=true
 EOF
 cp "$HOME/.local/share/applications/hackformiami-manager.desktop" "$HOME/.config/autostart/hackformiami-manager.desktop"
 
+sudo install -m 0700 "$REPO_DIR/deploy/install-cloudflared.sh" /usr/local/sbin/hackformiami-cloudflared-install
+sudo install -m 0700 "$REPO_DIR/deploy/install-site.sh" /usr/local/sbin/hackformiami-site-install
 sudo install -m 0755 "$REPO_DIR/deploy/auto-update.sh" /usr/local/bin/hackformiami-auto-update
 sudo install -m 0755 "$REPO_DIR/deploy/post-update.sh" /usr/local/bin/hackformiami-post-update
 sudo tee /etc/systemd/system/hackformiami-update.service >/dev/null <<SERVICE_UPDATE
