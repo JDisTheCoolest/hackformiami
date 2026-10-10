@@ -11,6 +11,7 @@ so the website and the speaker can be built before the AI part is ready.
 import os
 import json
 import threading
+import time
 import urllib.error
 import urllib.request
 from typing import Optional
@@ -30,6 +31,7 @@ except ImportError:
 
 import core
 from ai import GEMMA_MODEL, MOCK, analyze_report
+from fight import detect_fight
 
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
@@ -188,6 +190,49 @@ def test_alert(type: str = "flood", area: str = "", x_admin_token: str = Header(
     check_admin(x_admin_token)
     return {"alert": core.make_test_alert(store, type, area)}
 
+
+# Camera-only local endpoint: an isolated stream must see two consecutive
+# positive frames before a tentative fight announcement is created.
+fight_lock = threading.Lock()
+fight_state = {"streak": 0, "last_seen": 0.0, "last_alert": 0.0}
+
+@app.post("/api/camera/fight")
+def camera_fight(photo: UploadFile = File(...), x_admin_token: str = Header(None)):
+    if not ADMIN_TOKEN or x_admin_token != ADMIN_TOKEN:
+        raise HTTPException(status_code=401, detail="hardware token required")
+    mime = photo.content_type or "image/jpeg"
+    if mime not in ("image/jpeg", "image/png", "image/webp"):
+        raise HTTPException(status_code=400, detail="unsupported image")
+    image = photo.file.read(MAX_PHOTO_MB * 1024 * 1024 + 1)
+    if len(image) > MAX_PHOTO_MB * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="image too large")
+    if MOCK:
+        return {"fight": False, "mock": True, "announced": False}
+    try:
+        detected = detect_fight(image, mime)
+    except Exception:
+        raise HTTPException(status_code=503, detail="camera analysis unavailable")
+    now = time.monotonic()
+    with fight_lock:
+        if not detected or now - fight_state["last_seen"] > 35:
+            fight_state["streak"] = 0
+        if detected:
+            fight_state["streak"] += 1
+        fight_state["last_seen"] = now
+        announce = (detected and fight_state["streak"] >= 2
+                    and now - fight_state["last_alert"] > 300)
+        if announce:
+            fight_state["last_alert"] = now
+            fight_state["streak"] = 0
+    if announce:
+        store.add_alert({
+            "id": core.new_id("a"), "type": "possible_fight", "level": "moderate",
+            "count": 0, "lat": 0, "lng": 0, "area": "camera area",
+            "message": {"en": "Attention. Possible physical fight detected near this camera. Stop fighting. Move to a safe distance and contact staff or emergency services if anyone is in danger."},
+            "report_ids": [], "created_at": core.now_iso(), "test": False,
+            "camera_generated": True, "unverified": True,
+        })
+    return {"fight": detected, "mock": False, "announced": announce}
 
 @app.get("/api/tide")
 def tide():
