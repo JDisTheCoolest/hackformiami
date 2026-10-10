@@ -36,8 +36,7 @@ from fight import detect_fight
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
 PHOTO_DIR = DATA_DIR / "photos"
-SITE_DIR = BASE_DIR.parent / "web" / "dist"  # Vite production website served at /
-APP_DIR = BASE_DIR.parent / "app"          # web app (photo/text reports, map) -> served at /app
+SITE_DIR = BASE_DIR.parent / "web" / "dist"  # authoritative Vite/React frontend
 PHOTO_DIR.mkdir(parents=True, exist_ok=True)
 
 ALERT_THRESHOLD = int(os.getenv("ALERT_THRESHOLD", "10"))   # reports needed to trigger an alert
@@ -287,23 +286,29 @@ def reset(x_admin_token: str = Header(None)):
 
 
 app.mount("/photos", StaticFiles(directory=PHOTO_DIR), name="photos")
-if (APP_DIR / "index.html").exists():
-    app.mount("/app", StaticFiles(directory=APP_DIR, html=True), name="app")
-elif (SITE_DIR / "index.html").exists():
-    @app.get("/app/{path:path}", include_in_schema=False)
-    def app_spa(path: str):
-        return FileResponse(SITE_DIR / "index.html")
 
-if (SITE_DIR / "index.html").exists():
-    @app.get("/login", include_in_schema=False)
-    @app.get("/signup", include_in_schema=False)
-    @app.get("/auth/confirm", include_in_schema=False)
-    @app.get("/account", include_in_schema=False)
-    @app.get("/reports", include_in_schema=False)
-    @app.get("/reports/new", include_in_schema=False)
-    @app.get("/alerts", include_in_schema=False)
-    @app.get("/settings", include_in_schema=False)
-    def auth_spa():
-        return FileResponse(SITE_DIR / "index.html")
-if SITE_DIR.exists():  # must stay last: serves the landing page for "/"
-    app.mount("/", StaticFiles(directory=SITE_DIR, html=True), name="website")
+
+@app.get("/{path:path}", include_in_schema=False)
+def react_frontend(path: str):
+    """Serve Vite assets and use its index for every client-side React route.
+
+    This route must remain last so it cannot intercept API or photo routes. The
+    explicit API check also makes unknown API URLs return 404 instead of HTML.
+    The legacy ``app/`` directory intentionally remains on disk but is not
+    mounted publicly because its application functionality is not auth-gated.
+    """
+    if path == "api" or path.startswith("api/"):
+        raise HTTPException(status_code=404, detail="API endpoint not found")
+
+    index = SITE_DIR / "index.html"
+    if not index.is_file():
+        raise HTTPException(status_code=503, detail="frontend build is not installed")
+
+    requested = (SITE_DIR / path).resolve()
+    try:
+        requested.relative_to(SITE_DIR.resolve())
+    except ValueError:
+        raise HTTPException(status_code=404, detail="not found") from None
+    if path and requested.is_file():
+        return FileResponse(requested)
+    return FileResponse(index)
