@@ -48,6 +48,8 @@ def state():
         "remote": "JDisTheCoolest/hackformiami",
         "cloudflared": run(["systemctl", "is-active", "cloudflared"]),
         "manager": "active",
+        "auto_update_timer": run(["systemctl", "is-active", "hackformiami-update.timer"]),
+        "auto_update_result": (read("/var/lib/hackformiami-update/status").strip() or "not yet checked")[:180],
         "updated": int(time.time()),
     }
 
@@ -89,8 +91,8 @@ code{font-size:12px;color:#b1e9db;word-break:break-word}
 @media(max-width:650px){.layout{display:block}aside{padding:16px;border-right:0;border-bottom:1px solid #294052}.nav{display:flex;gap:4px;margin-top:13px;overflow-x:auto}.nav a{padding:9px}.sidefoot{display:none}main{padding:25px 17px}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.card,.panel{padding:16px}.value{font-size:24px}}
 </style></head><body><div class="layout">
 <aside><div class="brand">⚡ Hack<b>ForMiami</b></div><div class="subtitle">RASPBERRY PI MANAGER</div>
-<nav class="nav"><a class="active" href="#overview">◈ Overview</a><a href="#services">◉ Services</a><a href="#deployment">⌘ Deployment</a></nav>
-<div class="sidefoot">Private management interface<br>Read-only diagnostics<br>Cloudflare Access recommended</div></aside>
+<nav class="nav"><a class="active" href="#overview">◈ Dashboard</a><a href="#services">◉ Services</a><a href="#deployment">⌘ Deployment</a><a href="#organizer">▤ Organizer</a><a href="#security">◇ Security</a></nav>
+<div class="sidefoot">Open Seas-inspired organizer console<br>Private management interface<br>Read-only diagnostics<br>Cloudflare Access recommended</div></aside>
 <main id="overview"><div class="top"><div><div class="eyebrow">Infrastructure / Server overview</div><h1>Control center</h1><p>Live telemetry from your HackForMiami Raspberry Pi.</p></div><div><span id="live" class="live">● Connecting</span> <button id="refresh" type="button">↻ Refresh</button></div></div>
 <div class="grid">
 <div class="card"><div class="label">CPU load · 1 min</div><div class="value" id="cpu">—</div><div class="small">System load average</div></div>
@@ -109,7 +111,7 @@ code{font-size:12px;color:#b1e9db;word-break:break-word}
 <div class="line"><span class="key">Commit</span><code id="commit">—</code></div>
 <div class="line"><span class="key">Working tree</span><span id="dirty" class="val">—</span></div>
 </div><a class="action" href="https://github.com/JDisTheCoolest/hackformiami" target="_blank" rel="noopener noreferrer">↗ Open repository</a></section></div>
-<section class="panel section"><h2>Deployment operations</h2><p>This interface deliberately does not run shell commands, restart services, or accept deployment tokens. Update through the Pi terminal using the checked-in installation script.</p>
+<section class="panel section" id="organizer"><h2>Organizer workspace</h2><p>Prepared for the hackathon site: events, content, images, registrations, and announcements. These modules stay inactive until the actual app is added; no placeholder data is published.</p><div class="rows"><div class="line"><span class="key">Events & announcements</span><span class="pill warning">Awaiting application</span></div><div class="line"><span class="key">Content & media library</span><span class="pill warning">Awaiting application</span></div><div class="line"><span class="key">Registrations & forms</span><span class="pill warning">Awaiting application</span></div></div></section><section class="panel section" id="security"><h2>Security & deployment automation</h2><div class="rows"><div class="line"><span class="key">GitHub update timer (every 30 seconds)</span><span id="autotimer" class="pill warning">Checking</span></div><div class="line"><span class="key">Last update result</span><span class="val" id="autores">—</span></div></div><div class="notice">Only share the manager hostname behind Cloudflare Access. Keep tunnel secrets outside GitHub. Automatic pulls can execute newly pushed code on this Pi.</div></section><section class="panel section"><h2>Deployment operations</h2><p>This interface deliberately does not run shell commands, restart services, or accept deployment tokens. Update through the Pi terminal using the checked-in installation script.</p>
 <code>cd /opt/hackformiami && git pull --ff-only && bash deploy/install-manager.sh</code>
 <p id="updated" class="small" style="margin-top:18px">Waiting for system data…</p></section>
 </main></div>
@@ -126,7 +128,7 @@ value('disk',d.disk_percent+'%');value('diskmeta',d.disk_free_gb+' GB available'
 el('rambar').style.width=d.ram_percent+'%';el('diskbar').style.width=d.disk_percent+'%';
 value('uptime',d.uptime_hours+'h');value('hostname',d.hostname);
 value('branch',d.branch);value('commit',d.commit);value('dirty',d.working_tree==='clean'?'Clean':'Changes detected');
-badge('manager',d.manager);badge('tunnel',d.cloudflared);
+badge('manager',d.manager);badge('tunnel',d.cloudflared);badge('autotimer',d.auto_update_timer);value('autores',d.auto_update_result);
 value('live','● Online');value('updated','Last updated: '+new Date(d.updated*1000).toLocaleString());
 }catch(e){value('live','● Offline');value('updated','Unable to retrieve status: '+e.message)}
 }
