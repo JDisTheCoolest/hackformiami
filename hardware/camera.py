@@ -20,6 +20,7 @@ Demo tip: point the camera at a laptop/phone screen showing a flooded street.
 """
 import hashlib
 import json
+import json
 import os
 import shutil
 import subprocess
@@ -310,6 +311,15 @@ def main():
     def track(frame: bytes) -> None:
         try:
             observation = tracker.update(frame)
+            payload = {"updated_at": time.time(), "people": observation["people"],
+                       "candidates": observation["candidates"],
+                       "frames_in_memory": observation["frames_in_memory"],
+                       "tracking_mode": "anonymous_session_ids",
+                       "fight_confirmed": False}
+            dest = Path("/var/lib/hackformiami-hardware/tracking.json")
+            temp = dest.with_suffix(".tmp")
+            temp.write_text(json.dumps(payload))
+            temp.replace(dest)
             if observation["candidates"]:
                 print("Motion review candidates (not confirmed fighting):",
                       observation["candidates"], flush=True)
