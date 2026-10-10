@@ -162,7 +162,8 @@ def health():
 
 @app.post("/api/reports")
 def create_report(background: BackgroundTasks, lat: float = Form(...), lng: float = Form(...), area: str = Form(""),
-                  text: str = Form(""), photo: Optional[UploadFile] = File(None)):
+                  text: str = Form(""), source: str = Form("neighbor"), reporter_id: str = Form(""),
+                  photo: Optional[UploadFile] = File(None)):
     """A report = photo, text, or both (voice: the app turns speech into text first)."""
     text = text.strip()[:1000]
     img, mime = None, "image/jpeg"
@@ -185,7 +186,8 @@ def create_report(background: BackgroundTasks, lat: float = Form(...), lng: floa
 
     report = {
         "id": rid, "lat": lat, "lng": lng, "area": area.strip()[:80],
-        "text": text, "photo_url": photo_url, "created_at": core.now_iso(),
+        "text": text, "source": "camera" if source == "camera" else "neighbor",
+        "reporter_id": reporter_id.strip()[:64], "photo_url": photo_url, "created_at": core.now_iso(),
         "status": "analyzing", "analysis": None, "mock": MOCK,
     }
     store.add_report(report)

@@ -280,7 +280,10 @@ def maybe_create_alert(store: Store, report: dict, threshold: int, radius_m: flo
 
     cluster = [r for r in reports
                if r.get("analysis") and r["analysis"]["type"] == atype and recent(r) and near(r) and qualifies(r, min_conf)]
-    if len(cluster) < threshold:
+    # independent sources: one camera (or app install) sending many photos counts once;
+    # reports without reporter_id each count on their own
+    sources = {r.get("reporter_id") or r["id"] for r in cluster}
+    if len(sources) < threshold:
         return None
     # don't fire twice for the same area/type within the window
     if any(a["type"] == atype and not a.get("test") and recent(a) and near(a) for a in alerts):
@@ -292,11 +295,11 @@ def maybe_create_alert(store: Store, report: dict, threshold: int, radius_m: flo
         "id": new_id("a"),
         "type": atype,
         "level": top["analysis"]["severity"],
-        "count": len(cluster),
+        "count": len(sources),
         "lat": round(sum(r["lat"] for r in cluster) / len(cluster), 6),
         "lng": round(sum(r["lng"] for r in cluster) / len(cluster), 6),
         "area": area,
-        "message": build_alert_message(atype, len(cluster), area, top),
+        "message": build_alert_message(atype, len(sources), area, top),
         "report_ids": [r["id"] for r in cluster],
         "created_at": now_iso(),
         "test": False,

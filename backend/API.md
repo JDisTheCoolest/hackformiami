@@ -12,6 +12,8 @@ Interactive docs: `/docs`. All responses are JSON.
 | `lng` | yes | `-80.1880` |
 | `photo` | one of photo/text | image file |
 | `text` | one of photo/text | `"Water up to the car doors on Brickell Bay Dr"` |
+| `source` | no | `"neighbor"` (default) or `"camera"` |
+| `reporter_id` | no | camera device id, or a random id the web app keeps in localStorage |
 | `area` | no | `"Brickell Bay Dr"` (street or neighborhood, used in the alert) |
 
 Voice: turn speech into text in the browser (Web Speech API) and send it as `text`.
@@ -89,8 +91,8 @@ Array of `report` objects, including `analyzing` and `failed` ones (check `statu
 ## GET /api/alerts — all alerts (newest first)
 
 ## Alert rule
-An alert fires when **3 reports** of the same `type`, with severity `moderate`/`severe`
-and confidence ≥ 0.5, arrive within **1 km** and **60 minutes**. Only one alert per area/type per window.
+An alert fires when **3 independent sources** (distinct `reporter_id`; a report without one counts as its own source, so one camera sending many photos counts once) report the same `type`, with severity `moderate`/`severe`
+and confidence ≥ 0.5, arrive within **1 km** and **60 minutes**. `alert.count` is the number of sources. Only one alert per area/type per window.
 Change with env vars `ALERT_THRESHOLD`, `ALERT_RADIUS_M`, `ALERT_WINDOW_MIN`, `MIN_CONFIDENCE`.
 
 ## GET /api/tide — banner
