@@ -74,6 +74,20 @@ def verified_supabase_user(authorization: str):
     return user
 
 
+def supabase_auth_reachable() -> bool:
+    """Check Auth configuration without accepting or exposing a user token."""
+    if not SUPABASE_URL or not SUPABASE_ANON_KEY or not SUPABASE_URL.startswith("https://"):
+        return False
+    request = urllib.request.Request(
+        f"{SUPABASE_URL}/auth/v1/settings", headers={"apikey": SUPABASE_ANON_KEY}
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=6) as response:
+            return response.status == 200
+    except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError):
+        return False
+
+
 def process_report(rid: str, img: Optional[bytes], mime: str, text: str):
     """Background task: analyze, update the stored report, then run the alert check."""
     report = next((r for r in store.data["reports"] if r["id"] == rid), None)
@@ -129,6 +143,14 @@ def health():
 def authenticated_user(authorization: str = Header(None)):
     user = verified_supabase_user(authorization)
     return {"id": user["id"], "email": user.get("email")}
+
+
+@app.get("/api/auth/health")
+def auth_health():
+    """Configuration health only. Actual JWT verification remains /api/auth/me."""
+    configured = bool(SUPABASE_URL and SUPABASE_ANON_KEY)
+    return {"configured": configured, "supabase_reachable": supabase_auth_reachable(),
+            "verification_endpoint": "/api/auth/me"}
 
 
 @app.post("/api/reports")

@@ -39,6 +39,14 @@ sudo install -m 0700 "$REPO_DIR/deploy/install-cloudflared.sh" /usr/local/sbin/h
 sudo install -m 0700 "$REPO_DIR/deploy/install-site.sh" /usr/local/sbin/hackformiami-site-install
 sudo install -m 0755 "$REPO_DIR/deploy/auto-update.sh" /usr/local/bin/hackformiami-auto-update
 sudo install -m 0755 "$REPO_DIR/deploy/post-update.sh" /usr/local/bin/hackformiami-post-update
+sudo install -m 0755 "$REPO_DIR/deploy/safe-deploy.sh" /usr/local/sbin/hackformiami-safe-deploy
+sudo install -m 0700 "$REPO_DIR/deploy/supabase-migrations.sh" /usr/local/sbin/hackformiami-supabase-migrations
+mkdir -p "$HOME/.config/hackformiami"
+chmod 700 "$HOME/.config/hackformiami"
+if [[ ! -f "$HOME/.config/hackformiami/manager.env" ]]; then
+  (umask 077; printf '%s\n' '# Optional local-only server credentials' 'SUPABASE_SERVICE_ROLE_KEY=' 'SUPABASE_DB_URL=' > "$HOME/.config/hackformiami/manager.env")
+fi
+chmod 600 "$HOME/.config/hackformiami/manager.env"
 sudo tee /etc/systemd/system/hackformiami-update.service >/dev/null <<SERVICE_UPDATE
 [Unit]
 Description=HackForMiami GitHub auto-update check

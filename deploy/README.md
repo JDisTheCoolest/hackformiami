@@ -15,9 +15,9 @@ bash deploy/install-manager.sh
 
 A graphical Pi desktop session (DISPLAY/Wayland) is required. If the Pi uses Raspberry Pi OS Lite, install a desktop environment before launching Tkinter. The installer adds an Applications-menu icon and a per-user autostart entry. The desktop manager will open on next graphical login.
 
-## Auto-update every 30 seconds
+## Update checks and explicit deployment
 
-The installer installs `hackformiami-update.timer`; its service checks the private GitHub `main` branch every 30 seconds after the preceding check completes. It fast-forwards only if there are no uncommitted local changes and history is not divergent. The GUI refreshes metrics every 15 seconds and reloads itself automatically if `manager/desktop.py` changes.
+The installer installs `hackformiami-update.timer`; its service fetches the private GitHub `main` branch every 30 seconds after the preceding check completes. It does not modify the working tree. Review pending commits and explicitly deploy them from the local Manager. Deployments refuse local changes, detached branches, and divergent history; they never force-reset or clean the repository.
 
 ```bash
 systemctl status hackformiami-update.timer --no-pager
@@ -45,7 +45,18 @@ Then open **HackForMiami Manager → Website & AI → Install / update website a
 
 For live AI, edit local-only `/etc/hackformiami/backend.env` using `sudoedit` and set `GEMINI_API_KEY`; then restart `hackformiami-site`. The file is created with root-only access, includes a randomly generated ADMIN_TOKEN, and must never be committed. Without the key the backend intentionally returns **mock/sample** AI output. Check `curl -fsS http://127.0.0.1:8000/api/health`.
 
-The update timer fetches GitHub every 30 seconds after each check; when `web/`, `backend/`, or `app/` changes, it starts a separate asynchronous builder service. Builds can take longer than 30 seconds. Errors: `sudo journalctl -u hackformiami-site-build.service -n 50 --no-pager`. Manager changes reload the desktop application.
+The update timer only fetches and reports availability. An approved Manager deployment fast-forwards, runs `npm ci`, builds the Vite app, installs backend requirements into the existing virtual environment, restarts the site service, and verifies `/api/health`. Logs are retained at `/var/lib/hackformiami-update/deploy.log`.
+
+## Supabase administration and migrations
+
+Public Supabase values remain in the ignored `.env.local`. Optional server-only values belong in `~/.config/hackformiami/manager.env`, created mode `0600` by the installer:
+
+```text
+SUPABASE_SERVICE_ROLE_KEY=
+SUPABASE_DB_URL=
+```
+
+Never prefix privileged values with `VITE_` or `NEXT_PUBLIC_`. The native Manager can diagnose Auth, tables, storage, FastAPI JWT verification, and (when authorized) users. Migration status uses `supabase_migrations.schema_migrations`; applying pending checked-in files requires confirmation and creates a `pg_dump` backup first. No arbitrary SQL input is accepted and no migration runs during startup, fetch, or deployment.
 
 ## Cloudflare Tunnel wizard
 

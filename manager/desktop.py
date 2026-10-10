@@ -10,6 +10,7 @@ from tkinter import ttk, messagebox
 import re
 import threading
 import webbrowser
+from supabase_manager import diagnostics, list_users, migration_files, set_user_disabled
 
 ROOT = Path("/opt/hackformiami")
 SOURCE = ROOT / "manager" / "desktop.py"
@@ -70,7 +71,7 @@ class Manager(tk.Tk):
         side.pack_propagate(False)
         tk.Label(side, text="⚡ HACK FOR MIAMI", bg="#0e1c2d", fg=ACCENT, font=("DejaVu Sans", 15, "bold")).pack(anchor="w", padx=20, pady=(27, 4))
         tk.Label(side, text="PRIVATE PI DESKTOP MANAGER", bg="#0e1c2d", fg=MUTED, font=("DejaVu Sans", 9)).pack(anchor="w", padx=20, pady=(0, 27))
-        for name in ("Overview", "Website & API", "AI Analysis", "Reports & Alerts", "GitHub Updates", "Cloudflare"):
+        for name in ("Overview", "Website & API", "Supabase", "Users", "AI Analysis", "Reports & Alerts", "GitHub Updates", "Cloudflare"):
             tk.Button(side, text="  "+name, anchor="w", bg="#0e1c2d", fg=FG, activebackground="#22463f", activeforeground=FG,
                       relief="flat", bd=0, padx=13, pady=14, font=("DejaVu Sans", 11),
                       command=lambda n=name:self.show(n)).pack(fill="x", padx=9, pady=1)
@@ -98,12 +99,21 @@ class Manager(tk.Tk):
             tk.Button(self.content,text="Refresh now",command=self.render_data,bg="#176657",fg=FG,relief="flat",padx=20,pady=12).pack(anchor="w",pady=15)
         elif name == "Website & API":
             self.site_screen()
+        elif name == "Supabase":
+            self.supabase_screen()
+        elif name == "Users":
+            self.users_screen()
         elif name == "GitHub Updates":
-            self.heading("GitHub deployment","Automatic 30-second GitHub checks")
+            self.heading("GitHub deployment","Review and explicitly deploy fast-forward updates")
             self.data = tk.Frame(self.content,bg=BG)
-            self.data.pack(fill="both",expand=True)
+            self.data.pack(fill="x")
             self.render_data(keys=["Branch","Commit","Git changes","Update timer","Last update"])
-            tk.Label(self.content,text="GitHub main is fast-forwarded when clean; no forced overwrite of local edits.",bg=BG,fg=MUTED,wraplength=650).pack(anchor="w")
+            self.deploy_status=tk.StringVar(value="Fetch checks only; deployment requires confirmation.")
+            tk.Label(self.content,textvariable=self.deploy_status,bg=BG,fg=MUTED,wraplength=760,justify="left").pack(anchor="w",pady=8)
+            row=tk.Frame(self.content,bg=BG); row.pack(anchor="w")
+            tk.Button(row,text="Fetch & preview",command=self.preview_deploy,bg=PANEL2,fg=FG,relief="flat",padx=14,pady=9).pack(side="left",padx=(0,8))
+            tk.Button(row,text="Deploy approved update",command=self.deploy_update,bg="#176657",fg=FG,relief="flat",padx=14,pady=9).pack(side="left")
+            tk.Label(self.content,text="Local changes, detached branches, and diverged history are refused. The workflow never resets or cleans the repository.",bg=BG,fg="#f1d395",wraplength=720,justify="left").pack(anchor="w",pady=8)
         elif name == "AI Analysis":
             self.ai_screen()
         elif name == "Reports & Alerts":
@@ -125,6 +135,121 @@ class Manager(tk.Tk):
                 return json.load(response)
         except Exception as exc:
             return {"error":str(exc)[:100]}
+
+    def preview_deploy(self):
+        self.deploy_status.set("Fetching remote branch and calculating pending commits...")
+        def work():
+            try:
+                p=subprocess.run(["/usr/local/sbin/hackformiami-safe-deploy","preview"],capture_output=True,text=True,timeout=60)
+                result=(p.stdout or p.stderr)[-2000:] or "No output"
+            except (OSError,subprocess.TimeoutExpired) as exc: result=f"Preview failed: {exc}"
+            self.after(0,lambda:self.deploy_status.set(result) if self.selected.get()=="GitHub Updates" else None)
+        threading.Thread(target=work,daemon=True).start()
+
+    def deploy_update(self):
+        if not messagebox.askyesno("Deploy update","Deploy the reviewed commits, rebuild frontend/backend, restart the service, and verify health?"): return
+        self.deploy_status.set("Deploying; logs are retained in /var/lib/hackformiami-update/deploy.log ...")
+        def work():
+            try:
+                p=subprocess.run(["pkexec","/usr/local/sbin/hackformiami-safe-deploy","apply"],capture_output=True,text=True,timeout=1200)
+                result=(p.stdout or p.stderr)[-2500:] or "Deployment produced no output"
+                if p.returncode: result="DEPLOYMENT FAILED\n"+result
+            except (OSError,subprocess.TimeoutExpired) as exc: result=f"Deployment failed: {exc}"
+            self.after(0,lambda:self.deploy_status.set(result) if self.selected.get()=="GitHub Updates" else None)
+        threading.Thread(target=work,daemon=True).start()
+
+    def supabase_screen(self):
+        self.heading("Supabase", "Authentication, schema, storage and migration diagnostics")
+        area=tk.Frame(self.content,bg=PANEL,padx=22,pady=18)
+        area.pack(fill="both",expand=True)
+        self.supabase_text=tk.StringVar(value="Checking Supabase without exposing credentials...")
+        tk.Label(area,textvariable=self.supabase_text,bg=PANEL,fg=FG,justify="left",anchor="nw",wraplength=740,font=("DejaVu Sans Mono",10)).pack(fill="both",expand=True,anchor="w")
+        tk.Button(area,text="Refresh diagnostics",command=self.refresh_supabase,bg="#176657",fg=FG,relief="flat",padx=14,pady=10).pack(anchor="w",pady=8)
+        row=tk.Frame(area,bg=PANEL); row.pack(anchor="w")
+        tk.Button(row,text="Check migration history",command=self.check_migrations,bg=PANEL2,fg=FG,relief="flat",padx=12,pady=8).pack(side="left",padx=(0,8))
+        tk.Button(row,text="Backup & apply pending",command=self.apply_migrations,bg="#68402f",fg=FG,relief="flat",padx=12,pady=8).pack(side="left")
+        tk.Label(area,text="Migration status is Unknown unless an authorized database connection checks Supabase's migration history. Migrations are never applied at startup or during Git fetch.",bg=PANEL,fg="#f1d395",wraplength=720,justify="left").pack(anchor="w")
+        self.refresh_supabase()
+
+    def refresh_supabase(self):
+        def work():
+            d=diagnostics(ROOT)
+            tables=", ".join(f"{k}: {v}" for k,v in d["tables"].items()) or "Not checked"
+            buckets=", ".join(f"{k}: {v}" for k,v in d["buckets"].items()) or "Not checked"
+            migrations="\n".join(f"  {m['name']}: {m['status']}" for m in migration_files(ROOT)) or "  No migration files"
+            count="Not authorized" if d["user_count"] is None else str(d["user_count"])
+            output=(f"Connection: {d['status']}\nProject: {d['project_url']}\nAuth API: {d['auth']}\n"
+                    f"FastAPI JWT verification: {d['jwt_endpoint']}\nDatabase tables: {tables}\n"
+                    f"Storage: {buckets}\nUsers: {count}\nAdmin credentials: {'Configured' if d['admin_configured'] else 'Not configured'}\n"
+                    f"Diagnostic: {d['diagnostic']}\n\nMigrations:\n{migrations}\n\n"
+                    "To check/apply migrations manually: open the Supabase Dashboard SQL Editor, review each pending file under supabase/migrations in filename order, take a database backup, then run only the reviewed file. Do not use the publishable key for migrations.")
+            self.after(0,lambda:self.supabase_text.set(output) if self.selected.get()=="Supabase" else None)
+        threading.Thread(target=work,daemon=True).start()
+
+    def check_migrations(self):
+        self.supabase_text.set("Checking the configured project's Supabase migration history...")
+        def work():
+            try:
+                p=subprocess.run(["pkexec","/usr/local/sbin/hackformiami-supabase-migrations","status"],capture_output=True,text=True,timeout=60)
+                result=(p.stdout or p.stderr)[-4000:] or "No migration status returned"
+            except (OSError,subprocess.TimeoutExpired) as exc: result=f"Migration check failed: {exc}"
+            self.after(0,lambda:self.supabase_text.set(result) if self.selected.get()=="Supabase" else None)
+        threading.Thread(target=work,daemon=True).start()
+
+    def apply_migrations(self):
+        if not messagebox.askyesno("Apply pending migrations","This will first create a database backup, then apply only pending checked-in migration files in order. Continue?"): return
+        self.supabase_text.set("Backing up the database before applying approved migrations...")
+        def work():
+            try:
+                p=subprocess.run(["pkexec","/usr/local/sbin/hackformiami-supabase-migrations","apply"],capture_output=True,text=True,timeout=1200)
+                result=(p.stdout or p.stderr)[-5000:] or "No migration output"
+                if p.returncode: result="MIGRATION FAILED\n"+result
+            except (OSError,subprocess.TimeoutExpired) as exc: result=f"Migration failed: {exc}"
+            self.after(0,lambda:self.supabase_text.set(result) if self.selected.get()=="Supabase" else None)
+        threading.Thread(target=work,daemon=True).start()
+
+    def users_screen(self):
+        self.heading("Supabase users", "Local-only account administration using server credentials")
+        area=tk.Frame(self.content,bg=PANEL,padx=20,pady=18)
+        area.pack(fill="both",expand=True)
+        self.user_status=tk.StringVar(value="Loading authorized user list...")
+        tk.Label(area,textvariable=self.user_status,bg=PANEL,fg=MUTED,anchor="w").pack(fill="x")
+        columns=("id","email","created","verified","status")
+        self.user_tree=ttk.Treeview(area,columns=columns,show="headings",height=13)
+        for col,width in zip(columns,(220,220,150,75,80)):
+            self.user_tree.heading(col,text=col.upper()); self.user_tree.column(col,width=width,stretch=True)
+        self.user_tree.pack(fill="both",expand=True,pady=10)
+        buttons=tk.Frame(area,bg=PANEL); buttons.pack(anchor="w")
+        tk.Button(buttons,text="Refresh",command=self.load_users,bg=PANEL2,fg=FG,relief="flat",padx=12,pady=8).pack(side="left",padx=(0,8))
+        tk.Button(buttons,text="Disable selected",command=lambda:self.change_user(True),bg="#68402f",fg=FG,relief="flat",padx=12,pady=8).pack(side="left",padx=4)
+        tk.Button(buttons,text="Re-enable selected",command=lambda:self.change_user(False),bg="#176657",fg=FG,relief="flat",padx=12,pady=8).pack(side="left",padx=4)
+        self.load_users()
+
+    def load_users(self):
+        def work():
+            try: users,error=list_users(ROOT),None
+            except Exception as exc: users,error=[],str(exc)
+            def paint():
+                if self.selected.get()!="Users": return
+                for item in self.user_tree.get_children(): self.user_tree.delete(item)
+                for user in users:
+                    self.user_tree.insert("", "end", values=(user["id"],user["email"],user["created_at"][:19],"Yes" if user["verified"] else "No",user["status"]))
+                self.user_status.set(error or f"{len(users)} account(s). Passwords and tokens are never retrieved.")
+            self.after(0,paint)
+        threading.Thread(target=work,daemon=True).start()
+
+    def change_user(self, disabled):
+        selected=self.user_tree.selection()
+        if not selected:
+            messagebox.showwarning("Select account","Select one account first."); return
+        values=self.user_tree.item(selected[0],"values"); user_id,email=values[0],values[1]
+        action="disable" if disabled else "re-enable"
+        if not messagebox.askyesno("Confirm account change",f"{action.capitalize()} {email or user_id}? This uses local server-only credentials."): return
+        def work():
+            try: set_user_disabled(ROOT,user_id,disabled); result=f"Account {action}d successfully."
+            except Exception as exc: result=f"Account update failed: {exc}"
+            self.after(0,lambda:(self.user_status.set(result),self.load_users()))
+        threading.Thread(target=work,daemon=True).start()
 
     def ai_screen(self):
         self.heading("AI Analysis", "Gemma report classification: flood, fire, storm damage, downed trees and power lines")
@@ -268,7 +393,7 @@ class Manager(tk.Tk):
                 self.destroy()
                 os.execv(sys.executable, [sys.executable, str(SOURCE)])
                 return
-            if self.selected.get() in ("Overview","GitHub Updates","Cloudflare"): self.render_data()
+            if self.selected.get() in ("Overview","GitHub Updates"): self.render_data()
         except OSError: pass
         self.after(15000,self.refresh)
 
