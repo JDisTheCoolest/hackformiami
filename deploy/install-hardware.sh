@@ -11,7 +11,7 @@ SERVER_URL=http://127.0.0.1:8000
 CAPTURE=usb
 CAM_DEVICE=
 INTERVAL=10
-PREVIEW_INTERVAL=2
+PREVIEW_INTERVAL=0.5
 CAMERA_SNAPSHOT_PATH=/var/lib/hackformiami-hardware/latest.jpg
 CAM_AI_ENABLED=1
 CAM_LAT=0
@@ -26,7 +26,7 @@ fi
 # Preserve existing local configuration while adding new safe defaults.
 grep -q '^CAPTURE=' /etc/hackformiami/hardware.env || echo 'CAPTURE=usb' | sudo tee -a /etc/hackformiami/hardware.env >/dev/null
 grep -q '^CAM_DEVICE=' /etc/hackformiami/hardware.env || echo 'CAM_DEVICE=' | sudo tee -a /etc/hackformiami/hardware.env >/dev/null
-grep -q '^PREVIEW_INTERVAL=' /etc/hackformiami/hardware.env || echo 'PREVIEW_INTERVAL=2' | sudo tee -a /etc/hackformiami/hardware.env >/dev/null
+grep -q '^PREVIEW_INTERVAL=' /etc/hackformiami/hardware.env || echo 'PREVIEW_INTERVAL=0.5' | sudo tee -a /etc/hackformiami/hardware.env >/dev/null
 sudo chmod 644 /etc/hackformiami/hardware.env
 # No API secrets belong in hardware.env; the manager reads this file to show settings.
 # Camera keeps its backend secret environment; speaker uses the logged-in user's
