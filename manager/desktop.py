@@ -71,7 +71,7 @@ class Manager(tk.Tk):
         side.pack_propagate(False)
         tk.Label(side, text="⚡ HACK FOR MIAMI", bg="#0e1c2d", fg=ACCENT, font=("DejaVu Sans", 15, "bold")).pack(anchor="w", padx=20, pady=(27, 4))
         tk.Label(side, text="PRIVATE PI DESKTOP MANAGER", bg="#0e1c2d", fg=MUTED, font=("DejaVu Sans", 9)).pack(anchor="w", padx=20, pady=(0, 27))
-        for name in ("Overview", "Website & API", "Supabase", "Users", "AI Analysis", "Reports & Alerts", "GitHub Updates", "Cloudflare"):
+        for name in ("Overview", "Website & API", "Supabase", "Users", "AI Analysis", "Camera & Speaker", "Reports & Alerts", "GitHub Updates", "Cloudflare"):
             tk.Button(side, text="  "+name, anchor="w", bg="#0e1c2d", fg=FG, activebackground="#22463f", activeforeground=FG,
                       relief="flat", bd=0, padx=13, pady=14, font=("DejaVu Sans", 11),
                       command=lambda n=name:self.show(n)).pack(fill="x", padx=9, pady=1)
@@ -116,6 +116,8 @@ class Manager(tk.Tk):
             tk.Label(self.content,text="Local changes, detached branches, and diverged history are refused. The workflow never resets or cleans the repository.",bg=BG,fg="#f1d395",wraplength=720,justify="left").pack(anchor="w",pady=8)
         elif name == "AI Analysis":
             self.ai_screen()
+        elif name == "Camera & Speaker":
+            self.camera_screen()
         elif name == "Reports & Alerts":
             self.reports_screen()
         elif name == "Cloudflare":
@@ -264,6 +266,79 @@ class Manager(tk.Tk):
         tk.Label(frame,text=message,bg=PANEL,fg=ACCENT,font=("DejaVu Sans",12,"bold"),justify="left",wraplength=620).pack(anchor="w",pady=10)
         tk.Label(frame,text="AI credentials must be stored only on this Pi in /etc/hackformiami/backend.env. A key present in a Git commit is considered compromised; revoke it and generate a replacement.",bg=PANEL,fg=MUTED,wraplength=640,justify="left").pack(anchor="w",pady=12)
         tk.Button(frame,text="Recheck AI connection",command=self.ai_screen,bg=PANEL2,fg=FG,relief="flat",padx=14,pady=9).pack(anchor="w",pady=12)
+
+
+    def camera_screen(self):
+        self.heading("Camera & Speaker", "Control live camera AI costs, audio alerts and location")
+        frame=tk.Frame(self.content,bg=PANEL,padx=22,pady=18)
+        frame.pack(fill="both",expand=True)
+        conf={}
+        try:
+            for line in Path("/etc/hackformiami/hardware.env").read_text().splitlines():
+                if "=" in line:
+                    k,v=line.split("=",1)
+                    if k in ("CAM_AI_ENABLED","INTERVAL","CAM_LAT","CAM_LNG","CAM_AREA"): conf[k]=v
+        except OSError: pass
+        active=conf.get("CAM_AI_ENABLED","0")=="1"
+        camera=cmd("systemctl","is-active","hackformiami-camera.service")
+        speaker=cmd("systemctl","is-active","hackformiami-speaker.service")
+        self.hw_status=tk.StringVar(value=f"Camera: {camera} | Speaker: {speaker} | AI uploads: {'ON' if active else 'OFF'}")
+        tk.Label(frame,textvariable=self.hw_status,bg=PANEL,fg=ACCENT,font=("DejaVu Sans",12,"bold")).pack(anchor="w",pady=8)
+        row=tk.Frame(frame,bg=PANEL); row.pack(anchor="w",pady=6)
+        for label,action in (("Enable camera AI","ai-on"),("Pause camera AI","ai-off"),("Start camera","start"),("Stop camera","stop")):
+            tk.Button(row,text=label,command=lambda a=action:self.hardware_action(a),bg=PANEL2,fg=FG,relief="flat",padx=9,pady=8).pack(side="left",padx=4)
+        tk.Label(frame,text="Camera AI is opt-in. OFF = no frame uploads or image-model requests. Speaker alerts from user reports remain separate.",bg=PANEL,fg=MUTED,wraplength=670,justify="left").pack(anchor="w",pady=8)
+        tk.Label(frame,text="Camera check interval (10–3600 seconds)",bg=PANEL,fg=FG).pack(anchor="w")
+        self.cam_interval=tk.StringVar(value=conf.get("INTERVAL","10"))
+        row=tk.Frame(frame,bg=PANEL);row.pack(anchor="w",pady=5)
+        tk.Entry(row,textvariable=self.cam_interval,width=10,bg=PANEL2,fg=FG,insertbackground=FG).pack(side="left")
+        tk.Button(row,text="Apply interval",command=lambda:self.hardware_action("interval",self.cam_interval.get()),bg=PANEL2,fg=FG).pack(side="left",padx=10)
+        tk.Label(frame,text="Physical camera location (not visitors' GPS)",bg=PANEL,fg=FG).pack(anchor="w",pady=(12,3))
+        row=tk.Frame(frame,bg=PANEL);row.pack(anchor="w")
+        self.cam_lat=tk.StringVar(value=conf.get("CAM_LAT","0"))
+        self.cam_lng=tk.StringVar(value=conf.get("CAM_LNG","0"))
+        self.cam_area=tk.StringVar(value=conf.get("CAM_AREA",""))
+        for title,var,w in (("Latitude",self.cam_lat,12),("Longitude",self.cam_lng,12),("Area",self.cam_area,25)):
+            tk.Label(row,text=title,bg=PANEL,fg=MUTED).pack(side="left",padx=(0,4))
+            tk.Entry(row,textvariable=var,width=w,bg=PANEL2,fg=FG,insertbackground=FG).pack(side="left",padx=(0,10))
+        buttons=tk.Frame(frame,bg=PANEL);buttons.pack(anchor="w",pady=8)
+        tk.Button(buttons,text="Detect approximate location",command=self.detect_camera_location,bg=PANEL2,fg=FG,padx=8).pack(side="left",padx=4)
+        tk.Button(buttons,text="Save confirmed location",command=lambda:self.hardware_action("location",self.cam_lat.get(),self.cam_lng.get(),self.cam_area.get()),bg="#176657",fg=FG,padx=8).pack(side="left",padx=4)
+        row=tk.Frame(frame,bg=PANEL);row.pack(anchor="w",pady=8)
+        tk.Button(row,text="Start speaker",command=lambda:self.hardware_action("speaker-start"),bg=PANEL2,fg=FG).pack(side="left",padx=4)
+        tk.Button(row,text="Stop speaker",command=lambda:self.hardware_action("speaker-stop"),bg=PANEL2,fg=FG).pack(side="left",padx=4)
+        tk.Label(frame,text="IP-based lookup is approximate and may be wrong. Confirm coordinates before saving. Physical fights are only tentative AI detections.",bg=PANEL,fg="#f1d395",wraplength=680,justify="left").pack(anchor="w",pady=8)
+
+    def detect_camera_location(self):
+        self.hw_status.set("Looking up approximate network location...")
+        def work():
+            try:
+                import json
+                from urllib.request import urlopen
+                with urlopen("https://ipwho.is/",timeout=8) as response: d=json.load(response)
+                if not d.get("success",False): raise RuntimeError("IP lookup unavailable")
+                lat,lng=float(d["latitude"]),float(d["longitude"])
+                area=(str(d.get("city",""))+", "+str(d.get("region",""))).strip(", ")
+                def done():
+                    if self.selected.get()!="Camera & Speaker":return
+                    self.cam_lat.set(str(lat));self.cam_lng.set(str(lng));self.cam_area.set(area)
+                    self.hw_status.set("Approximate IP location found. Check it carefully before saving.")
+                self.after(0,done)
+            except Exception as exc:
+                self.after(0,lambda:self.hw_status.set("Location lookup failed: "+str(exc)[:100]))
+        threading.Thread(target=work,daemon=True).start()
+
+    def hardware_action(self,action,*args):
+        if action=="ai-on" and not messagebox.askyesno("Enable camera AI","Start sending camera images to AI? This consumes paid API tokens."):return
+        self.hw_status.set("Applying "+action+" ...")
+        def work():
+            try:
+                p=subprocess.run(["pkexec","/usr/local/sbin/hackformiami-hardware-control",action,*args],capture_output=True,text=True,timeout=60)
+                result=(p.stdout or p.stderr).strip()[:300]
+                if p.returncode: result="Failed: "+result
+            except (OSError,subprocess.TimeoutExpired) as exc: result="Failed: "+str(exc)
+            self.after(0,lambda:self.hw_status.set(result) if self.selected.get()=="Camera & Speaker" else None)
+        threading.Thread(target=work,daemon=True).start()
 
     def reports_screen(self):
         self.heading("Reports & Alerts", "Read-only view of real FastAPI reporting endpoints")
