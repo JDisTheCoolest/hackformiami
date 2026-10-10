@@ -47,6 +47,9 @@ PY
     systemctl "$ACTION" hackformiami-camera.service
     echo "Camera service: $ACTION"
     ;;
+  speaker-test)
+    /usr/bin/python3 /opt/hackformiami/hardware/speaker.py --test
+    ;;
   speaker-start|speaker-stop)
     systemctl "${ACTION#speaker-}" hackformiami-speaker.service
     echo "Speaker: $ACTION"
