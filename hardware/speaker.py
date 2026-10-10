@@ -206,6 +206,6 @@ def main():
 
 if __name__ == "__main__":
     if "--test" in __import__("sys").argv:
-        play({"message":{"en":"Speaker test. Four Forces audio is working."}})
+        say("Alert! Alert! Fighting!", "en")
     else:
         main()
