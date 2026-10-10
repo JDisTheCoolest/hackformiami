@@ -27,6 +27,22 @@ case "$ACTION" in
     systemctl try-restart hackformiami-camera.service || true
     echo "Camera interval set to $SECONDS seconds"
     ;;
+  location)
+    LAT="$2"; LNG="$3"; AREA="$4"
+    python3 - "$LAT" "$LNG" "$AREA" <<'PY'
+import sys
+lat, lng = map(float, sys.argv[1:3])
+area=sys.argv[3]
+assert -90 <= lat <= 90 and -180 <= lng <= 180
+assert len(area) <= 80 and chr(10) not in area and chr(13) not in area
+PY
+    tmp=$(mktemp)
+    grep -Ev "^(CAM_LAT|CAM_LNG|CAM_AREA)=" "$ENV" > "$tmp" || true
+    printf 'CAM_LAT=%s\nCAM_LNG=%s\nCAM_AREA=%s\n' "$LAT" "$LNG" "$AREA" >> "$tmp"
+    cat "$tmp" > "$ENV"; rm -f "$tmp"; chmod 600 "$ENV"
+    systemctl try-restart hackformiami-camera.service || true
+    echo "Camera location saved"
+    ;;
   start|stop|restart)
     systemctl "$ACTION" hackformiami-camera.service
     echo "Camera service: $ACTION"
