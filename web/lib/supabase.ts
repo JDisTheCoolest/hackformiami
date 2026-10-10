@@ -3,11 +3,11 @@ import { createClient } from "@supabase/supabase-js";
 const supabaseUrl = import.meta.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
 const supabaseAnonKey = import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error("Supabase configuration is missing.");
-}
+export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+// Keep the public landing page available even if auth has not been configured.
+// Dummy settings are NEVER intended to authenticate a user.
+export const supabase = createClient(supabaseUrl || "https://unconfigured.invalid", supabaseAnonKey || "unconfigured", {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
