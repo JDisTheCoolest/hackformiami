@@ -20,7 +20,7 @@ from pathlib import Path
 from fastapi import BackgroundTasks, FastAPI, File, Form, Header, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 
 try:
     from dotenv import load_dotenv
@@ -255,6 +255,17 @@ def camera_fight(photo: UploadFile = File(...), x_admin_token: str = Header(None
             "camera_generated": True, "unverified": True,
         })
     return {"fight": detected, "mock": False, "announced": announce}
+
+
+@app.get("/api/camera/snapshot")
+def camera_snapshot(authorization: str = Header(None)):
+    # Never expose the local camera anonymously. Supabase verifies every request.
+    verified_supabase_user(authorization)
+    image = Path("/var/lib/hackformiami-hardware/latest.jpg")
+    if not image.is_file():
+        raise HTTPException(status_code=404, detail="camera has not captured a frame")
+    return Response(content=image.read_bytes(), media_type="image/jpeg",
+                    headers={"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"})
 
 @app.get("/api/tide")
 def tide():
