@@ -222,9 +222,43 @@ def main():
     last_analysis = 0.0
     analysis_thread = None
     shot = Path(tempfile.gettempdir()) / "miami_alert_cam.jpg"
+    cv_cam = None
+    if CAPTURE.lower() in ("usb","v4l2","auto"):
+        try:
+            import cv2
+            for device in video_devices():
+                candidate = cv2.VideoCapture(str(device), cv2.CAP_V4L2)
+                if candidate.isOpened():
+                    candidate.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+                    candidate.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+                    candidate.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+                    cv_cam = candidate
+                    print("Persistent USB camera:",device,flush=True)
+                    break
+                candidate.release()
+        except Exception as exc:
+            print("Persistent capture unavailable:",exc,flush=True)
+
     while True:
         started = time.time()
-        image = capture_frame(shot)
+        image = None
+        if cv_cam is not None:
+            try:
+                ok, frame = cv_cam.read()
+                if ok:
+                    ok_jpg, jpg = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 75])
+                    if ok_jpg:
+                        image = jpg.tobytes()
+                        publish_snapshot(image)
+                else:
+                    cv_cam.release()
+                    cv_cam = None
+            except Exception as exc:
+                print("Persistent camera read failed:", exc, flush=True)
+                cv_cam.release()
+                cv_cam = None
+        if cv_cam is None and image is None:
+            image = capture_frame(shot)
         if image:
             try:
                 observation = tracker.update(image)
