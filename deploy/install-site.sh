@@ -15,7 +15,10 @@ sudo chmod 600 /etc/hackformiami/backend.env
 sudo apt-get update
 sudo apt-get install -y python3 python3-venv python3-pip nodejs npm curl
 if ! node -e 'process.exit(Number(process.versions.node.split(".")[0])>=22?0:1)' 2>/dev/null; then
-  echo "Node.js 22+ required by Vite 8. Install a current Node.js 22+ release and rerun." >&2; exit 1
+  echo "Installing Node.js 22 for Vite 8..."
+  curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+  sudo apt-get install -y nodejs
+  node -e 'process.exit(Number(process.versions.node.split(".")[0])>=22?0:1)'
 fi
 python3 -m venv /opt/hackformiami/.venv
 /opt/hackformiami/.venv/bin/pip install -r backend/requirements.txt
