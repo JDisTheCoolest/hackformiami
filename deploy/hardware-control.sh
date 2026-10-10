@@ -47,6 +47,16 @@ PY
     systemctl "$ACTION" hackformiami-camera.service
     echo "Camera service: $ACTION"
     ;;
+  audio-device)
+    DEVICE="${2:-}"
+    [[ "$DEVICE" =~ ^[a-zA-Z0-9_:,.-]{1,80}$ ]] || { echo "Invalid ALSA device"; exit 2; }
+    tmp=$(mktemp)
+    grep -v "^ALSA_DEVICE=" "$ENV" > "$tmp" || true
+    printf "ALSA_DEVICE=%s\n" "$DEVICE" >> "$tmp"
+    cat "$tmp" > "$ENV"; rm -f "$tmp"; chmod 644 "$ENV"
+    systemctl try-restart hackformiami-speaker.service || true
+    echo "Audio device set to $DEVICE"
+    ;;
   speaker-test)
     /usr/bin/python3 /opt/hackformiami/hardware/speaker.py --test
     ;;
