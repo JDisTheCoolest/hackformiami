@@ -1,0 +1,236 @@
+@import "tailwindcss";
+@import "@fontsource-variable/inter-tight";
+
+@source "../../components";
+@source "../../lib";
+
+@theme {
+  --font-sans: "Inter Tight Variable", ui-sans-serif, system-ui, sans-serif;
+
+  --color-abyss: #030814;
+  --color-deep: #06152f;
+  --color-trench: #0a1f45;
+  --color-electric: #2868ff;
+  --color-cyan: #65d9f2;
+  --color-foam: #eef4ff;
+  --color-mist: #a9b8d3;
+  --color-dim: #7f8ca8;
+  --color-line: rgb(169 184 211 / 0.14);
+
+  --color-air: #cfdcf2;
+  --color-land: #9db48a;
+  --color-stone: #c4b89b;
+  --color-fire: #ff8a3d;
+  --color-ember: #ffc061;
+  --color-flare: #e8513a;
+
+  --color-sev-none: #4cc38a;
+  --color-sev-low: #f2d14b;
+  --color-sev-moderate: #ff9b3d;
+  --color-sev-severe: #ff4d4d;
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out-quint: cubic-bezier(0.83, 0, 0.17, 1);
+}
+
+@layer base {
+  html {
+    background: var(--color-abyss);
+    color: var(--color-foam);
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    background: var(--color-abyss);
+    font-family: var(--font-sans);
+    overflow-x: clip;
+  }
+  ::selection {
+    background: rgb(101 217 242 / 0.35);
+    color: white;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-cyan);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+  section[id] {
+    scroll-margin-top: 72px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
+  }
+}
+
+@utility label-sm {
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  font-variant-numeric: tabular-nums;
+}
+
+@utility hairline {
+  border-color: var(--color-line);
+}
+
+@utility text-balance {
+  text-wrap: balance;
+}
+
+/* Reveal-on-scroll: elements start slightly lowered and transparent, become visible when .is-in is set. */
+@utility reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition:
+    opacity 0.9s var(--ease-out-expo),
+    transform 0.9s var(--ease-out-expo);
+  &.is-in {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+@keyframes travel {
+  from {
+    offset-distance: 0%;
+  }
+  to {
+    offset-distance: 100%;
+  }
+}
+@keyframes scan {
+  0% {
+    transform: translateY(-10%);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(110%);
+    opacity: 0;
+  }
+}
+@keyframes blink {
+  0%,
+  92%,
+  100% {
+    transform: scaleY(1);
+  }
+  95% {
+    transform: scaleY(0.1);
+  }
+}
+@keyframes drift {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+@keyframes sweep {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(400%);
+  }
+}
+@keyframes orbit {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes stage-in {
+  from {
+    opacity: 0;
+    clip-path: circle(12% at 50% 60%);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    clip-path: circle(120% at 50% 60%);
+    filter: blur(0);
+  }
+}
+@keyframes scan-map {
+  0% {
+    transform: translateY(-160px);
+  }
+  100% {
+    transform: translateY(700px);
+  }
+}
+@keyframes progress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+@keyframes rule-dot {
+  0% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  8%,
+  85% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+@keyframes rule-alert {
+  0%,
+  50% {
+    opacity: 0;
+  }
+  60%,
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes kenburns {
+  from {
+    transform: scale(1.02);
+  }
+  to {
+    transform: scale(1.12) translate3d(-1.5%, -1%, 0);
+  }
+}
