@@ -9,6 +9,7 @@ alert hardware is tested. It never writes to the backend.
 ```bash
 cd web
 npm install
+npm run dev:phone  # same, but reachable from a phone on the same Wi-Fi (prints a Network URL)
 npm run dev        # http://localhost:5173 — proxies /api to http://localhost:8000 (the backend)
 npm run build      # type-check + production build into web/dist (static files)
 npm run lint
