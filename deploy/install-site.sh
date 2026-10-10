@@ -8,6 +8,7 @@ if [[ ! -f /etc/hackformiami/backend.env ]]; then
   sudo sh -c 'umask 077; cat > /etc/hackformiami/backend.env' <<EOF
 GEMINI_API_KEY=
 GEMMA_MODEL=gemma-4-26b-a4b-it
+ALERT_THRESHOLD=10
 ADMIN_TOKEN=$token
 EOF
 fi
