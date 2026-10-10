@@ -277,7 +277,7 @@ class Manager(tk.Tk):
             for line in Path("/etc/hackformiami/hardware.env").read_text().splitlines():
                 if "=" in line:
                     k,v=line.split("=",1)
-                    if k in ("CAM_AI_ENABLED","INTERVAL","CAM_LAT","CAM_LNG","CAM_AREA"): conf[k]=v
+                    if k in ("CAM_AI_ENABLED","INTERVAL","CAM_LAT","CAM_LNG","CAM_AREA","ALSA_DEVICE"): conf[k]=v
         except OSError: pass
         active=conf.get("CAM_AI_ENABLED","0")=="1"
         camera=cmd("systemctl","is-active","hackformiami-camera.service")
@@ -305,6 +305,11 @@ class Manager(tk.Tk):
         tk.Button(buttons,text="Detect approximate location",command=self.detect_camera_location,bg=PANEL2,fg=FG,padx=8).pack(side="left",padx=4)
         tk.Button(buttons,text="Save confirmed location",command=lambda:self.hardware_action("location",self.cam_lat.get(),self.cam_lng.get(),self.cam_area.get()),bg="#176657",fg=FG,padx=8).pack(side="left",padx=4)
         row=tk.Frame(frame,bg=PANEL);row.pack(anchor="w",pady=8)
+        self.alsa_device=tk.StringVar(value=conf.get("ALSA_DEVICE","default"))
+        tk.Label(frame,text="Speaker ALSA output (use aplay -l for card/device)",bg=PANEL,fg=FG).pack(anchor="w",pady=(8,3))
+        audio_row=tk.Frame(frame,bg=PANEL);audio_row.pack(anchor="w",pady=4)
+        tk.Entry(audio_row,textvariable=self.alsa_device,width=23,bg=PANEL2,fg=FG,insertbackground=FG).pack(side="left")
+        tk.Button(audio_row,text="Save audio device",command=lambda:self.hardware_action("audio-device",self.alsa_device.get()),bg=PANEL2,fg=FG).pack(side="left",padx=6)
         tk.Button(row,text="Test speaker audio",command=lambda:self.hardware_action("speaker-test"),bg="#176657",fg=FG).pack(side="left",padx=4)
         tk.Button(row,text="Start speaker",command=lambda:self.hardware_action("speaker-start"),bg=PANEL2,fg=FG).pack(side="left",padx=4)
         tk.Button(row,text="Stop speaker",command=lambda:self.hardware_action("speaker-stop"),bg=PANEL2,fg=FG).pack(side="left",padx=4)
