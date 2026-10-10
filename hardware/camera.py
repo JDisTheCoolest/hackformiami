@@ -29,7 +29,7 @@ from pathlib import Path
 import requests
 
 SERVER_URL = os.getenv("SERVER_URL", "http://localhost:8000").rstrip("/")
-INTERVAL = float(os.getenv("INTERVAL", "60"))          # seconds; free Gemma tier has rate limits
+INTERVAL = float(os.getenv("INTERVAL", "10"))          # seconds; free Gemma tier has rate limits
 REPORTER_ID = os.getenv("REPORTER_ID", "pi-cam-1")
 LAT = float(os.getenv("CAM_LAT", "25.7650"))            # where the camera is mounted
 LNG = float(os.getenv("CAM_LNG", "-80.1880"))
@@ -84,10 +84,7 @@ def send(path: Path) -> None:
         print(f"server answered {resp.status_code}: {resp.text[:200]}")
         return
     body = resp.json()
-    a = body["report"]["analysis"]
-    print(f"{a['type']} / {a['severity']} / {a['depth_in']} in / conf {a['confidence']}")
-    if body.get("alert"):
-        print("ALERT CREATED:", body["alert"]["message"]["en"])
+    print("Submitted camera report:", body.get("report", {}).get("id"), "- AI analysis queued")
 
 
 def main():
