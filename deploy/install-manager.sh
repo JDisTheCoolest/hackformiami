@@ -67,6 +67,19 @@ Unit=hackformiami-update.service
 [Install]
 WantedBy=timers.target
 TIMER
+sudo tee /etc/systemd/system/hackformiami-site-build.service >/dev/null <<'BUILDER'
+[Unit]
+Description=Build HackForMiami website after GitHub update
+After=network-online.target
+ConditionPathExists=/etc/hackformiami/backend.env
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/hackformiami
+ExecStart=/bin/bash -c 'cd /opt/hackformiami/web && npm ci && npm run build && /opt/hackformiami/.venv/bin/pip install -r /opt/hackformiami/backend/requirements.txt'
+ExecStartPost=/bin/systemctl try-restart hackformiami-site.service
+TimeoutStartSec=900
+BUILDER
 sudo systemctl daemon-reload
 sudo systemctl enable --now hackformiami-update.timer
 sudo systemctl start hackformiami-update.service
