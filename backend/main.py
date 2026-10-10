@@ -29,7 +29,7 @@ from ai import GEMMA_MODEL, MOCK, analyze_report
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
 PHOTO_DIR = DATA_DIR / "photos"
-SITE_DIR = BASE_DIR.parent / "website"     # landing page (Magzhan) -> served at /
+SITE_DIR = BASE_DIR.parent / "web" / "dist"  # Vite production website served at /
 APP_DIR = BASE_DIR.parent / "app"          # web app (photo/text reports, map) -> served at /app
 PHOTO_DIR.mkdir(parents=True, exist_ok=True)
 
