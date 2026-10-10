@@ -30,7 +30,7 @@ from pathlib import Path
 import requests
 
 SERVER_URL = os.getenv("SERVER_URL", "http://localhost:8000").rstrip("/")
-INTERVAL = float(os.getenv("INTERVAL", "10"))          # seconds; free Gemma tier has rate limits
+INTERVAL = max(10.0, float(os.getenv("INTERVAL", "10")))          # seconds; free Gemma tier has rate limits
 REPORTER_ID = os.getenv("REPORTER_ID", "pi-cam-1")
 LAT = float(os.getenv("CAM_LAT", "25.7650"))            # where the camera is mounted
 LNG = float(os.getenv("CAM_LNG", "-80.1880"))
@@ -72,6 +72,18 @@ def capture(path: Path) -> bool:
     return False
 
 
+def ai_enabled() -> bool:
+    # Re-read every cycle so the GUI can pause paid analysis without restarting.
+    try:
+        settings = Path("/etc/hackformiami/hardware.env").read_text()
+        for line in settings.splitlines():
+            if line.startswith("CAM_AI_ENABLED="):
+                return line.partition("=")[2].strip().lower() in ("1", "yes", "true", "on")
+    except OSError:
+        pass
+    return False
+
+
 def send(path: Path) -> None:
     with path.open("rb") as f:
         resp = requests.post(
@@ -108,7 +120,9 @@ def main():
     shot = Path(tempfile.gettempdir()) / "miami_alert_cam.jpg"
     while True:
         started = time.time()
-        if capture(shot):
+        if not ai_enabled():
+            print("Camera AI paused; no photos uploaded, no model calls", flush=True)
+        elif capture(shot):
             digest = hashlib.sha256(shot.read_bytes()).hexdigest()
             if SKIP_UNCHANGED and digest == last_hash:
                 print("frame unchanged, skipped")
