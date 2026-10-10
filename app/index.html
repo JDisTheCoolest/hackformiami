@@ -81,6 +81,19 @@
   #map { position: absolute; inset: 0; background: var(--abyss); }
   .leaflet-tile-pane { filter: brightness(.88) saturate(1.05); }   /* satellite, a touch darker so pins and labels pop */
   .osm-dark { filter: invert(1) hue-rotate(180deg) brightness(.85) contrast(.9); }
+  #cmap { position: absolute; inset: 0; opacity: 0; pointer-events: none; }
+  .mapwrap.cz #cmap { opacity: 1; pointer-events: auto; z-index: 2; }
+  .mapwrap.cz #map { display: none; }
+  #cmap .cesium-viewer, #cmap .cesium-widget { width: 100%; height: 100%; }
+  #cmap .cesium-widget-credits { font-size: 9px; }
+  #cmap .cesium-credit-textContainer, #cmap .cesium-credit-expand-link { color: var(--dim); }
+  #wcard { position: absolute; left: 8px; right: 8px; bottom: 22px; z-index: 700; background: var(--deep); border: 1px solid var(--line);
+    border-radius: 14px; padding: 12px 14px; display: flex; gap: 12px; align-items: flex-start; animation: fade .3s var(--ease) both; }
+  #wcard .txt p { margin: 0; }
+  #wcard .big { font-size: 1.375rem; font-weight: 600; letter-spacing: -.03em; line-height: 1.15; font-variant-numeric: tabular-nums; }
+  #wcard .sub { color: var(--mist); font-size: .875rem; margin-top: 2px; }
+  #wcard .src { margin-top: 6px; }
+  #wx { flex: none; width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--line); background: transparent; color: var(--foam); font-size: 18px; line-height: 1; cursor: pointer; }
   #rcount { margin: -4px 2px 0; }
   #rcount p { margin: 0; font-size: .8125rem; color: var(--mist); font-variant-numeric: tabular-nums; }
   #rcount .src { margin-top: 2px; }
@@ -193,6 +206,7 @@
   #v3cap { margin: 12px 0 0; font-size: .75rem; color: var(--dim); }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; } }
 </style>
+<script src="config.js" onerror="void 0"></script>   <!-- optional, git-ignored: window.CESIUM_TOKEN -->
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
 </head>
 <body>
@@ -206,7 +220,7 @@
   <main>
     <section id="s-home" class="screen on">
       <div id="tide" class="tidecard" hidden></div>
-      <div id="mapslot"><div class="mapwrap" id="mapwrap"><div id="map"></div></div></div>
+      <div id="mapslot"><div class="mapwrap" id="mapwrap"><div id="cmap"></div><div id="map"></div><div id="wcard" hidden><div class="txt"><p class="big" id="wbig"></p><p class="sub" id="wcars"></p><p class="src" id="wcap"></p></div><button type="button" id="wx" aria-label="Close">×</button></div></div></div>
       <div id="rcount"></div>
       <div id="status" class="ok">
         <div class="txt"><p class="lbl" id="slbl"></p><h1></h1><p class="sub"></p><p class="src" id="ssrc"></p></div>
@@ -275,7 +289,8 @@ const TYPES = {
     other: ["Ijans toupre ou", "Posib ijans toupre", "ijans"] },
 };
 const T = {
-  en: { updated: "updated", r2km: "Near you · 2 km", lowT: "Low", srcN: "Neighbor reports", srcT: "NOAA",
+  en: { ofwater: "of water", wcap: "Water level is an approximate illustration from the AI estimate.",
+    updated: "updated", r2km: "Near you · 2 km", lowT: "Low", srcN: "Neighbor reports", srcT: "NOAA",
     view3d: "3D water level", illus: "Illustration based on AI depth estimate, not a survey.", lvls: ["Below the curb", "Above the curb", "Halfway up the wheels", "At the car doors", "Knee-deep"], close: "Close",
     navHome: "Home", navMap: "Map", navAlerts: "Alerts", navMe: "Me", langLabel: "Language", tideRisk: "Tide risk", king: "King-tide window", now: "Now", high: "High", riskw: { low: "Low", elevated: "Elevated", high: "High" }, reports24: "reports · 24 h", listen: "Listen", noAlerts: "No alerts yet.", neighbors: "neighbor reports", ago: "min ago", test: "test alert", live: "Live", offline: "Offline", yourLoc: "Your location", miami: "Miami, Florida", reporter: "Reporter ID",
     textph: "Report flooding: add a photo or describe what you see", hint: "Using your location · tap the map to change",
@@ -286,7 +301,8 @@ const T = {
     thanksPhoto: "Checking your photo...", thanks: "Checking your report...", failed: "Couldn't read this report. Please try again.",
     e400: "Add a photo or text.", e413: "Photo too large (max 10 MB).", e502: "AI failed, please try again.", eNet: "Network error, try again.",
     nomic: "Voice not supported here.", listening: "Listening..." },
-  es: { updated: "actualizado", r2km: "Cerca de usted · 2 km", lowT: "Baja", srcN: "Reportes de vecinos", srcT: "NOAA",
+  es: { ofwater: "de agua", wcap: "El nivel del agua es una ilustración aproximada de la estimación de la IA.",
+    updated: "actualizado", r2km: "Cerca de usted · 2 km", lowT: "Baja", srcN: "Reportes de vecinos", srcT: "NOAA",
     view3d: "Nivel del agua en 3D", illus: "Ilustración basada en una estimación de profundidad de la IA, no en un levantamiento.", lvls: ["Debajo del borde de la acera", "Sobre el borde de la acera", "A media altura de las ruedas", "A la altura de las puertas del auto", "A la altura de la rodilla"], close: "Cerrar",
     navHome: "Inicio", navMap: "Mapa", navAlerts: "Alertas", navMe: "Yo", langLabel: "Idioma", tideRisk: "Riesgo de marea", king: "Marea viva", now: "Ahora", high: "Alta", riskw: { low: "Bajo", elevated: "Elevado", high: "Alto" }, reports24: "reportes · 24 h", listen: "Escuchar", noAlerts: "Aún no hay alertas.", neighbors: "reportes de vecinos", ago: "min", test: "alerta de prueba", live: "En vivo", offline: "Sin conexión", yourLoc: "Su ubicación", miami: "Miami, Florida", reporter: "ID de reportero",
     textph: "Reporte una inundación: agregue una foto o describa lo que ve", hint: "Usando su ubicación · toque el mapa para cambiarla",
@@ -297,7 +313,8 @@ const T = {
     thanksPhoto: "Revisando su foto...", thanks: "Revisando su reporte...", failed: "No pudimos leer este reporte. Intente de nuevo.",
     e400: "Agregue una foto o texto.", e413: "Foto muy grande (máx. 10 MB).", e502: "Falló la IA, intente de nuevo.", eNet: "Error de red, intente de nuevo.",
     nomic: "Voz no disponible aquí.", listening: "Escuchando..." },
-  ht: { updated: "mizajou", r2km: "Toupre ou · 2 km", lowT: "Ba", srcN: "Rapò vwazen", srcT: "NOAA",
+  ht: { ofwater: "dlo", wcap: "Nivo dlo a se yon ilistrasyon apwoksimatif ki soti nan estimasyon IA a.",
+    updated: "mizajou", r2km: "Toupre ou · 2 km", lowT: "Ba", srcN: "Rapò vwazen", srcT: "NOAA",
     view3d: "Nivo dlo an 3D", illus: "Ilistrasyon ki baze sou estimasyon pwofondè IA a, se pa yon mezi egzak.", lvls: ["Anba trotwa a", "Anwo trotwa a", "Mwatye wou yo", "Nan pòt machin yo", "Jiska jenou"], close: "Fèmen",
     navHome: "Akèy", navMap: "Kat", navAlerts: "Alèt", navMe: "Mwen", langLabel: "Lang", tideRisk: "Risk mare", king: "Mare vivan", now: "Kounye a", high: "Wo", riskw: { low: "Ba", elevated: "Wo", high: "Trè wo" }, reports24: "rapò · 24 è", listen: "Koute", noAlerts: "Poko gen alèt.", neighbors: "rapò vwazen", ago: "min", test: "alèt tès", live: "An dirèk", offline: "Dekonekte", yourLoc: "Kote ou ye", miami: "Miami, Florid", reporter: "ID rapòtè",
     textph: "Rapòte inondasyon: ajoute yon foto oswa dekri sa ou wè", hint: "Ap itilize kote ou ye · touche kat la pou chanje l",
@@ -372,6 +389,7 @@ function drawReports() {
     m.setIcon(icon); m.setPopupContent(popup(r));
   }
   for (const id in markers) if (!seen.has(id)) { map.removeLayer(markers[id]); delete markers[id]; }
+  czDraw();
 }
 
 // --- status card (2 km around the user) ---
@@ -481,7 +499,7 @@ navigator.geolocation?.watchPosition(p => {
   me = { lat: p.coords.latitude, lng: p.coords.longitude };
   if (meMarker) meMarker.setLatLng([me.lat, me.lng]);
   else meMarker = L.marker([me.lat, me.lng], { icon: dotIcon("me"), interactive: false, zIndexOffset: -500 }).addTo(map);
-  if (!centered) { centered = true; map.setView([me.lat, me.lng], 15); }
+  if (!centered) { centered = true; map.setView([me.lat, me.lng], 15); czHome(); }
   if (!pickMarker) repPos = me;
   drawStatus(); drawChrome();
 }, () => {}, { enableHighAccuracy: true, maximumAge: 10000 });
@@ -504,7 +522,7 @@ function show(name) {
   document.querySelectorAll(".tab[aria-current]").forEach(b => b.setAttribute("aria-current", "page"));
   (name === "map" ? $("s-map") : $("mapslot")).append($("mapwrap"));   // one Leaflet map, shown as a card or full screen
   if (name !== "map") openDock(false);
-  setTimeout(() => map.invalidateSize(), 50);
+  setTimeout(() => { map.invalidateSize(); if (cz) { cz.viewer.resize(); cz.viewer.scene.requestRender(); } }, 50);
 }
 document.querySelectorAll(".tab").forEach(b => b.onclick = () => show(b.dataset.go));
 $("bell").onclick = () => show("alerts");
@@ -551,12 +569,17 @@ $("photo").onchange = () => {
 };
 $("rm").onclick = () => { file = null; $("photo").value = ""; state(); };
 
-map.on("click", e => {   // tap map to change the report location (while the report box is open)
-  if ($("dock").hidden) return;
-  repPos = { lat: e.latlng.lat, lng: e.latlng.lng };
-  if (pickMarker) pickMarker.setLatLng(e.latlng);
-  else pickMarker = L.marker(e.latlng, { icon: dotIcon("pick"), interactive: false }).addTo(map);
-});
+function setPick(lat, lng) {   // report location chosen by tapping either map
+  repPos = { lat, lng };
+  if (pickMarker) pickMarker.setLatLng([lat, lng]);
+  else pickMarker = L.marker([lat, lng], { icon: dotIcon("pick"), interactive: false }).addTo(map);
+  czPick(lat, lng);
+}
+function clearPick() {
+  if (pickMarker) { map.removeLayer(pickMarker); pickMarker = null; }
+  czPick(null); repPos = me;
+}
+map.on("click", e => { if (!$("dock").hidden) setPick(e.latlng.lat, e.latlng.lng); });   // while the report box is open
 
 // voice -> text with the Web Speech API
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -605,7 +628,7 @@ async function submit() {
     const rep = (await r.json()).report;
     pending[rep.id] = bubble(spin() + " " + esc(t(sentPhoto ? "thanksPhoto" : "thanks")));
     $("textin").value = ""; file = null; $("photo").value = ""; grow();
-    if (pickMarker) { map.removeLayer(pickMarker); pickMarker = null; repPos = me; }
+    clearPick();
     poll();
   } catch { bubble(esc(t("eNet")), true); }
   finally { sending = false; state(); }
@@ -766,6 +789,151 @@ function scene3d(THREE, OrbitControls, host, depthIn) {
     renderer.dispose(); renderer.domElement.remove();
   } };
 }
+
+// --- 3D map: CesiumJS + Google Photorealistic 3D Tiles (falls back to the Leaflet map above) ---
+const CESIUM = "https://cdn.jsdelivr.net/npm/cesium@1.120.0/Build/Cesium/";
+const MIAMI = { lat: 25.7617, lng: -80.1918 }, GEOID = -25;   // ellipsoid height of Miami ground, used only if sampling fails
+let cz = null, czPicked = null;   // cz = { C, viewer, ents, me, pick, water, prev }
+
+function czDraw() {
+  if (!cz || !cz.live) return;
+  const { C, viewer, ents } = cz, seen = new Set();
+  for (const r of reports) {
+    seen.add(r.id);
+    const an = isAnalyzing(r), a = r.analysis;
+    const key = an ? "an" + cz.tick : sevColor(a.severity) + (a.needs_confirmation ? "u" : "");
+    const img = czImg(an ? css("--dim") : sevColor(a.severity), an ? 0 : a.needs_confirmation ? 2 : 1, an ? cz.tick : 0, key);
+    let e = ents[r.id];
+    if (!e) e = ents[r.id] = viewer.entities.add({ id: "r_" + r.id, position: C.Cartesian3.fromDegrees(r.lng, r.lat, 14),
+      billboard: { image: img, width: 28, height: 28, heightReference: C.HeightReference.RELATIVE_TO_3D_TILE, disableDepthTestDistance: Infinity,
+        scaleByDistance: new C.NearFarScalar(100, 1.3, 3000, .7) } });
+    else e.billboard.image = img;
+    e.reportId = r.id;
+  }
+  for (const id in ents) if (!seen.has(id)) { viewer.entities.remove(ents[id]); delete ents[id]; }
+  viewer.scene.requestRender();
+}
+const imgCache = {};
+function czImg(color, kind, tick, key) {   // kind: 0 analyzing, 1 normal, 2 unconfirmed (dashed)
+  if (imgCache[key]) return imgCache[key];
+  const c = document.createElement("canvas"); c.width = c.height = 56; const x = c.getContext("2d");
+  x.globalAlpha = kind === 0 && tick ? .45 : 1;
+  x.fillStyle = color; x.globalAlpha *= .22; x.beginPath(); x.arc(28, 28, 26, 0, 6.283); x.fill();
+  x.globalAlpha = kind === 0 && tick ? .45 : 1;
+  x.beginPath(); x.arc(28, 28, 11, 0, 6.283); x.fill();
+  x.lineWidth = 3; x.strokeStyle = css("--abyss"); if (kind === 2) x.setLineDash([4, 3]); x.stroke();
+  return (imgCache[key] = c.toDataURL());
+}
+function czHome() {   // start view: user (or downtown Miami), tilted 45 deg, ~800 m up
+  if (!cz) return;
+  const { C, viewer } = cz, p = me || MIAMI;
+  viewer.camera.setView({ destination: C.Cartesian3.fromDegrees(p.lng, p.lat - 800 / 111320, 800 + GEOID), orientation: { heading: 0, pitch: C.Math.toRadians(-45), roll: 0 } });
+  czMe(); viewer.scene.requestRender();
+}
+function czMe() {
+  if (!cz || !me) return;
+  const { C, viewer } = cz, pos = C.Cartesian3.fromDegrees(me.lng, me.lat, 4);
+  if (cz.me) cz.me.position = pos;
+  else cz.me = viewer.entities.add({ position: pos, billboard: { image: czDot("#2868ff"), width: 22, height: 22, heightReference: C.HeightReference.RELATIVE_TO_3D_TILE, disableDepthTestDistance: Infinity } });
+  viewer.scene.requestRender();
+}
+function czDot(color) {
+  const c = document.createElement("canvas"); c.width = c.height = 44; const x = c.getContext("2d");
+  x.fillStyle = color; x.globalAlpha = .3; x.beginPath(); x.arc(22, 22, 21, 0, 6.283); x.fill(); x.globalAlpha = 1;
+  x.beginPath(); x.arc(22, 22, 10, 0, 6.283); x.fill(); x.lineWidth = 3; x.strokeStyle = "#eef4ff"; x.stroke();
+  return c.toDataURL();
+}
+function czPick(lat, lng) {
+  if (!cz) return;
+  const { C, viewer } = cz;
+  if (cz.pick) { viewer.entities.remove(cz.pick); cz.pick = null; }
+  if (lat != null) cz.pick = viewer.entities.add({ position: C.Cartesian3.fromDegrees(lng, lat, 4),
+    billboard: { image: czDot("#eef4ff"), width: 22, height: 22, heightReference: C.HeightReference.RELATIVE_TO_3D_TILE, disableDepthTestDistance: Infinity } });
+  viewer.scene.requestRender();
+}
+
+// tap a pin: fly to street level and raise a translucent water surface to ground + depth
+async function czSelect(r) {
+  if (!r || !r.analysis || isAnalyzing(r)) return;
+  const { C, viewer } = cz, a = r.analysis, depth = Math.max(0, Number(a.depth_in) || 0);
+  czClear(false);
+  cz.prev = { position: viewer.camera.positionWC.clone(), heading: viewer.camera.heading, pitch: viewer.camera.pitch, roll: viewer.camera.roll };
+  let gh = GEOID + 2;   // ponytail: rough Miami ground height if the tiles can't be sampled in time
+  try {
+    const [pt] = await Promise.race([viewer.scene.sampleHeightMostDetailed([C.Cartographic.fromDegrees(r.lng, r.lat)]),
+      new Promise((_, no) => setTimeout(no, 3000))]);
+    if (pt && Number.isFinite(pt.height)) gh = pt.height;
+  } catch {}
+  viewer.camera.flyToBoundingSphere(new C.BoundingSphere(C.Cartesian3.fromDegrees(r.lng, r.lat, gh), 1),
+    { offset: new C.HeadingPitchRange(viewer.camera.heading, C.Math.toRadians(-35), 60), duration: 2.2 });
+  const target = depth * .0254, t0 = performance.now(); let k = 0;
+  cz.water = viewer.entities.add({ position: C.Cartesian3.fromDegrees(r.lng, r.lat, gh),
+    ellipse: { semiMajorAxis: 35, semiMinorAxis: 35, height: new C.CallbackProperty(() => gh + .02 + target * k, false),
+      material: C.Color.fromCssColorString("#2a7de1").withAlpha(.55) } });
+  (function rise(now) {
+    if (!cz || !cz.water) return;
+    k = 1 - Math.pow(1 - Math.min(1, (now - t0) / 2000), 3);
+    viewer.scene.requestRender();
+    if (k < 1) requestAnimationFrame(rise);
+  })(t0);
+  $("wbig").textContent = `≈ ${depth} ${t("in")} ${t("ofwater")}`;
+  $("wcars").textContent = a.car_passable == null ? "" : a.car_passable ? t("cars") : t("nocars");
+  $("wcap").textContent = t("wcap");
+  $("wcard").hidden = false;
+}
+function czClear(flyBack) {
+  if (!cz) return;
+  if (cz.water) { cz.viewer.entities.remove(cz.water); cz.water = null; }
+  $("wcard").hidden = true;
+  if (flyBack && cz.prev) cz.viewer.camera.flyTo({ destination: cz.prev.position, orientation: { heading: cz.prev.heading, pitch: cz.prev.pitch, roll: cz.prev.roll }, duration: 1.5 });
+  cz.viewer.scene.requestRender();
+}
+$("wx").onclick = () => czClear(true);
+
+function loadScript(src) { return new Promise((ok, no) => { const e = document.createElement("script"); e.src = src; e.onload = ok; e.onerror = no; document.head.append(e); }); }
+
+async function startCesium() {
+  if (!window.CESIUM_TOKEN || !webgl()) return;   // no token or no WebGL: stay on Leaflet
+  let done = false, viewer = null;
+  const fail = why => {   // Leaflet is still underneath, so falling back just means not revealing Cesium
+    if (done) return; done = true; console.warn("3D map unavailable, using Leaflet:", why);
+    try { viewer && viewer.destroy(); } catch {} cz = null; $("mapwrap").classList.remove("cz");
+  };
+  const timer = setTimeout(() => fail("timeout"), 8000);
+  try {
+    window.CESIUM_BASE_URL = CESIUM;
+    const css_ = document.createElement("link"); css_.rel = "stylesheet"; css_.href = CESIUM + "Widgets/widgets.css"; document.head.append(css_);
+    await loadScript(CESIUM + "Cesium.js");
+    const C = window.Cesium; C.Ion.defaultAccessToken = window.CESIUM_TOKEN;
+    viewer = new C.Viewer("cmap", { globe: false, baseLayer: false, requestRenderMode: true, maximumRenderTimeChange: Infinity,
+      timeline: false, animation: false, geocoder: false, baseLayerPicker: false, homeButton: false, sceneModePicker: false,
+      navigationHelpButton: false, fullscreenButton: false, vrButton: false, infoBox: false, selectionIndicator: false, shouldAnimate: false });
+    viewer.scene.skyBox.show = false; viewer.scene.backgroundColor = C.Color.fromCssColorString("#030814");
+    viewer.resolutionScale = Math.min(devicePixelRatio || 1, 2);
+    const tiles = await C.createGooglePhotorealistic3DTileset();
+    if (done) return;
+    if (matchMedia("(max-width: 700px)").matches) tiles.maximumScreenSpaceError = 16;   // lighter on phones
+    viewer.scene.primitives.add(tiles);
+    cz = { C, viewer, ents: {}, tick: 0, live: false };
+    czHome();
+    await new Promise((ok, no) => { tiles.initialTilesLoaded.addEventListener(ok); tiles.tileFailed.addEventListener(e => { if (cz && !cz.live && /40[13]/.test(String(e && e.message))) no(e.message); }); viewer.scene.requestRender(); });
+    if (done) return;
+    clearTimeout(timer); done = true; cz.live = true;
+    $("mapwrap").classList.add("cz");   // reveal Cesium, hide Leaflet
+    viewer.resize(); czDraw(); czMe();
+    setInterval(() => { if (cz && reports.some(isAnalyzing)) { cz.tick ^= 1; czDraw(); } }, 700);   // gray pins pulse
+    new C.ScreenSpaceEventHandler(viewer.scene.canvas).setInputAction(async e => {
+      const hit = viewer.scene.pick(e.position);
+      if (hit && hit.id && hit.id.reportId) return czSelect(reports.find(x => x.id === hit.id.reportId));
+      if ($("dock").hidden || !viewer.scene.pickPositionSupported) return;
+      const pos = viewer.scene.pickPosition(e.position);
+      if (!pos) return;
+      const g = C.Cartographic.fromCartesian(pos);
+      setPick(C.Math.toDegrees(g.latitude), C.Math.toDegrees(g.longitude));
+    }, C.ScreenSpaceEventType.LEFT_CLICK);
+  } catch (e) { clearTimeout(timer); fail(e && e.message || e); }
+}
+setTimeout(startCesium, 0);
 
 applyLang();
 state();
