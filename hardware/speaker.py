@@ -60,6 +60,7 @@ def say(text: str, lang: str):
 def play(alert: dict):
     set_led("red")
     siren()
+    say("Attention. Four Forces safety alert.", "en")
     for lang in LANGS:
         text = alert.get("message", {}).get(lang.strip())
         if text:
@@ -76,7 +77,9 @@ def minutes_since(iso: str) -> float:
 
 
 def main():
-    last_id = None
+    state_file = Path(os.getenv("SPEAKER_STATE", "/var/lib/hackformiami-hardware/last_alert_id"))
+    try: last_id = state_file.read_text().strip() or None
+    except OSError: last_id = None
     first = True
     last_tide_check, tide_risk = 0.0, "low"
     print(f"Listening to {SERVER_URL} ...")
@@ -91,6 +94,8 @@ def main():
                 if not first:                 # don't replay an old alert when the speaker boots
                     play(alert)
                 last_id = alert["id"]
+                state_file.parent.mkdir(parents=True, exist_ok=True)
+                state_file.write_text(last_id)
 
             if alert and minutes_since(alert["created_at"]) < RED_MINUTES:
                 set_led("red")
