@@ -2,7 +2,14 @@
 set -euo pipefail
 cd /opt/hackformiami
 sudo apt-get update
-sudo apt-get install -y espeak-ng pulseaudio-utils alsa-utils python3-requests python3-opencv fswebcam v4l-utils curl
+sudo apt-get install -y espeak-ng pulseaudio-utils alsa-utils python3-requests python3-opencv fswebcam v4l-utils curl ffmpeg python3-venv
+# Speech runtime for natural online voices, isolated from the camera runtime.
+if [[ ! -x /opt/hackformiami/hardware/voice-venv/bin/edge-tts ]]; then
+  sudo python3 -m venv /opt/hackformiami/hardware/voice-venv
+  sudo /opt/hackformiami/hardware/voice-venv/bin/pip install 'edge-tts>=6,<8'
+fi
+sudo chmod -R a+rX /opt/hackformiami/hardware/voice-venv
+
 # Small local MobileNet SSD: detects only Pascal VOC class 15 (person).
 # Download model files once. Keep model weights on Pi, never upload video for person boxes.
 MODEL_DIR=/opt/hackformiami/hardware/models
@@ -45,6 +52,7 @@ REPORTER_ID=pi-cam-1
 SPEAK_LANGS=en
 POLL_SECONDS=5
 ALSA_DEVICE=default
+TTS_PROVIDER=edge
 ENV
 fi
 # Preserve existing local configuration while adding new safe defaults.
@@ -56,6 +64,7 @@ grep -q '^CAMERA_HEIGHT=' /etc/hackformiami/hardware.env || echo 'CAMERA_HEIGHT=
 grep -q '^CAMERA_JPEG_QUALITY=' /etc/hackformiami/hardware.env || echo 'CAMERA_JPEG_QUALITY=80' | sudo tee -a /etc/hackformiami/hardware.env >/dev/null
 grep -q '^CAMERA_STATUS_PATH=' /etc/hackformiami/hardware.env || echo 'CAMERA_STATUS_PATH=/var/lib/hackformiami-hardware/status.json' | sudo tee -a /etc/hackformiami/hardware.env >/dev/null
 grep -q '^PREVIEW_INTERVAL=' /etc/hackformiami/hardware.env || echo 'PREVIEW_INTERVAL=0.5' | sudo tee -a /etc/hackformiami/hardware.env >/dev/null
+grep -q '^TTS_PROVIDER=' /etc/hackformiami/hardware.env || echo 'TTS_PROVIDER=edge' | sudo tee -a /etc/hackformiami/hardware.env >/dev/null
 sudo chmod 644 /etc/hackformiami/hardware.env
 # No API secrets belong in hardware.env; the manager reads this file to show settings.
 # Camera keeps its backend secret environment; speaker uses the logged-in user's
