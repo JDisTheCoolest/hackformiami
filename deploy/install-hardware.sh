@@ -2,12 +2,14 @@
 set -euo pipefail
 cd /opt/hackformiami
 sudo apt-get update
-sudo apt-get install -y espeak-ng alsa-utils python3-requests fswebcam
+sudo apt-get install -y espeak-ng alsa-utils python3-requests python3-opencv fswebcam v4l-utils
 sudo install -d -m 0755 /var/lib/hackformiami-hardware
 sudo install -d -m 0750 /etc/hackformiami
 if [[ ! -f /etc/hackformiami/hardware.env ]]; then
   sudo tee /etc/hackformiami/hardware.env >/dev/null <<'ENV'
 SERVER_URL=http://127.0.0.1:8000
+CAPTURE=usb
+CAM_DEVICE=
 INTERVAL=10
 PREVIEW_INTERVAL=2
 CAMERA_SNAPSHOT_PATH=/var/lib/hackformiami-hardware/latest.jpg
@@ -21,6 +23,10 @@ POLL_SECONDS=5
 ALSA_DEVICE=default
 ENV
 fi
+# Preserve existing local configuration while adding new safe defaults.
+grep -q '^CAPTURE=' /etc/hackformiami/hardware.env || echo 'CAPTURE=usb' | sudo tee -a /etc/hackformiami/hardware.env >/dev/null
+grep -q '^CAM_DEVICE=' /etc/hackformiami/hardware.env || echo 'CAM_DEVICE=' | sudo tee -a /etc/hackformiami/hardware.env >/dev/null
+grep -q '^PREVIEW_INTERVAL=' /etc/hackformiami/hardware.env || echo 'PREVIEW_INTERVAL=2' | sudo tee -a /etc/hackformiami/hardware.env >/dev/null
 sudo chmod 644 /etc/hackformiami/hardware.env
 # No API secrets belong in hardware.env; the manager reads this file to show settings.
 for unit in camera speaker; do

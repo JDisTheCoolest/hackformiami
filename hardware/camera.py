@@ -19,7 +19,6 @@ Camera backends tried in order (set CAPTURE=... to force one):
 Demo tip: point the camera at a laptop/phone screen showing a flooded street.
 """
 import hashlib
-import urllib.parse
 import os
 import shutil
 import subprocess
@@ -38,40 +37,111 @@ LAT = float(os.getenv("CAM_LAT", "25.7650"))            # where the camera is mo
 LNG = float(os.getenv("CAM_LNG", "-80.1880"))
 AREA = os.getenv("CAM_AREA", "Brickell Bay Dr")
 CAPTURE = os.getenv("CAPTURE", "auto")
+CAM_DEVICE = os.getenv("CAM_DEVICE", "").strip()
+VIDEO_ROOT = Path(os.getenv("VIDEO_DEVICE_ROOT", "/dev"))
+FAILURE_LOG_INTERVAL = max(10.0, float(os.getenv("CAM_FAILURE_LOG_INTERVAL", "60")))
 SKIP_UNCHANGED = os.getenv("SKIP_UNCHANGED", "1") == "1"  # don't resend an identical frame
 ONCE = os.getenv("ONCE", "0") == "1"                      # take one photo and exit (testing)
 SNAPSHOT_PATH = Path(os.getenv("CAMERA_SNAPSHOT_PATH", "/var/lib/hackformiami-hardware/latest.jpg"))
+_capture_log = {"last": 0.0, "failed": False}
+
+
+def video_devices(root: Path = VIDEO_ROOT) -> list[Path]:
+    """Return stable V4L2 paths first, rediscovering devices after disconnects."""
+    found: list[Path] = []
+    configured = Path(CAM_DEVICE) if CAM_DEVICE else None
+    if configured and configured.exists():
+        found.append(configured)
+    by_id = root / "v4l" / "by-id"
+    if by_id.is_dir():
+        found.extend(sorted(path for path in by_id.iterdir() if path.exists()))
+    found.extend(sorted(root.glob("video*"), key=lambda p: (len(p.name), p.name)))
+    unique: list[Path] = []
+    seen: set[str] = set()
+    for path in found:
+        try:
+            identity = str(path.resolve())
+        except OSError:
+            identity = str(path)
+        if identity not in seen:
+            seen.add(identity)
+            unique.append(path)
+    return unique
+
+
+def capture_methods() -> list[str]:
+    mode = CAPTURE.lower()
+    if mode in ("usb", "v4l2"):
+        return ["fswebcam", "opencv"]
+    if mode in ("csi", "libcamera"):
+        return ["rpicam", "libcam"]
+    if mode != "auto":
+        return [mode]
+    # A detected V4L2 device is strong evidence of a USB webcam; do not probe CSI first.
+    return ["fswebcam", "opencv", "rpicam", "libcam"] if video_devices() else ["rpicam", "libcam", "fswebcam", "opencv"]
+
+
+def _log_capture_result(error: str | None) -> None:
+    now = time.monotonic()
+    if error:
+        if not _capture_log["failed"] or now - _capture_log["last"] >= FAILURE_LOG_INTERVAL:
+            print(f"Camera capture unavailable: {error}. Will keep retrying.", flush=True)
+            _capture_log["last"] = now
+        _capture_log["failed"] = True
+    elif _capture_log["failed"]:
+        print("Camera capture recovered.", flush=True)
+        _capture_log["failed"] = False
 
 
 def capture(path: Path) -> bool:
-    """Take one JPEG photo into `path`. Returns True on success."""
-    methods = [CAPTURE] if CAPTURE != "auto" else ["rpicam", "libcam", "fswebcam", "opencv"]
-    for m in methods:
-        try:
-            if m == "rpicam" and shutil.which("rpicam-still"):
-                subprocess.run(["rpicam-still", "-n", "-t", "1000", "--width", "1280",
-                                "--height", "960", "-o", str(path)], check=True, capture_output=True)
-            elif m == "libcam" and shutil.which("libcamera-still"):
-                subprocess.run(["libcamera-still", "-n", "-t", "1000", "--width", "1280",
-                                "--height", "960", "-o", str(path)], check=True, capture_output=True)
-            elif m == "fswebcam" and shutil.which("fswebcam"):
-                subprocess.run(["fswebcam", "-q", "-r", "1280x960", "--no-banner", str(path)],
-                               check=True, capture_output=True)
-            elif m == "opencv":
-                import cv2
-                cam = cv2.VideoCapture(int(os.getenv("CAM_INDEX", "0")))
-                for _ in range(5):              # let auto-exposure settle
-                    ok, frame = cam.read()
-                cam.release()
-                if not ok:
+    """Capture a fresh JPEG. A prior file is removed so it can never become a fake frame."""
+    errors: list[str] = []
+    for m in capture_methods():
+        devices = video_devices() if m in ("fswebcam", "opencv") else [None]
+        if m in ("fswebcam", "opencv") and not devices:
+            errors.append("no V4L2 devices found")
+            continue
+        for device in devices:
+            try:
+                path.unlink(missing_ok=True)
+                if m == "rpicam" and shutil.which("rpicam-still"):
+                    subprocess.run(["rpicam-still", "-n", "-t", "1000", "--width", "1280",
+                                    "--height", "960", "-o", str(path)], check=True, capture_output=True)
+                elif m == "libcam" and shutil.which("libcamera-still"):
+                    subprocess.run(["libcamera-still", "-n", "-t", "1000", "--width", "1280",
+                                    "--height", "960", "-o", str(path)], check=True, capture_output=True)
+                elif m == "fswebcam" and shutil.which("fswebcam"):
+                    subprocess.run(["fswebcam", "-q", "-d", str(device), "-r", "1280x960", "--no-banner", str(path)],
+                                   check=True, capture_output=True)
+                elif m == "opencv":
+                    import cv2
+                    cam = cv2.VideoCapture(str(device), cv2.CAP_V4L2)
+                    try:
+                        cam.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+                        cam.set(cv2.CAP_PROP_FRAME_HEIGHT, 960)
+                        ok, frame = False, None
+                        for _ in range(5):
+                            ok, frame = cam.read()
+                    finally:
+                        cam.release()
+                    if not ok:
+                        raise RuntimeError("V4L2 returned no frame")
+                    if not cv2.imwrite(str(path), frame):
+                        raise RuntimeError("JPEG encoding failed")
+                else:
+                    if m in ("rpicam", "libcam", "fswebcam"):
+                        errors.append(f"{m} command is not installed")
                     continue
-                cv2.imwrite(str(path), frame)
-            else:
-                continue
-            if path.exists() and path.stat().st_size > 0:
-                return True
-        except Exception as exc:
-            print(f"capture with {m} failed: {exc}")
+                if path.exists() and path.stat().st_size > 0:
+                    _log_capture_result(None)
+                    return True
+            except Exception as exc:
+                detail = getattr(exc, "stderr", b"")
+                if isinstance(detail, bytes):
+                    detail = detail.decode(errors="replace")
+                errors.append(f"{m} on {device or 'CSI'}: {str(detail or exc).strip()[:160]}")
+    path.unlink(missing_ok=True)
+    _log_capture_result("; ".join(errors[-4:]) or "no supported camera backend found")
     return False
 
 
@@ -129,6 +199,21 @@ def publish_snapshot(image: bytes) -> None:
     tmp.replace(target)
 
 
+def capture_frame(path: Path) -> bytes | None:
+    """Capture and publish only a newly produced frame; failures return no AI input."""
+    if not capture(path):
+        return None
+    try:
+        image = path.read_bytes()
+        if not image:
+            return None
+        publish_snapshot(image)
+        return image
+    except OSError as exc:
+        _log_capture_result(f"could not publish snapshot: {exc}")
+        return None
+
+
 def main():
     print(f"Camera {REPORTER_ID} at {AREA} ({LAT}, {LNG}) -> preview every {PREVIEW_INTERVAL:.0f}s; AI every {INTERVAL:.0f}s")
     last_hash = None
@@ -137,13 +222,8 @@ def main():
     shot = Path(tempfile.gettempdir()) / "miami_alert_cam.jpg"
     while True:
         started = time.time()
-        if capture(shot):
-            try:
-                image = shot.read_bytes()
-                publish_snapshot(image)
-            except OSError as exc:
-                print("Snapshot unavailable:",exc)
-                image = b""
+        image = capture_frame(shot)
+        if image:
             due = time.monotonic() - last_analysis >= INTERVAL
             busy = analysis_thread is not None and analysis_thread.is_alive()
             if image and due and not busy:
@@ -163,8 +243,6 @@ def main():
                                 print("server not reachable:", exc)
                         analysis_thread = threading.Thread(target=analyze, daemon=True)
                         analysis_thread.start()
-        else:
-            print("no camera found - check the cable / CAPTURE setting")
         if ONCE:
             if analysis_thread is not None:
                 analysis_thread.join()

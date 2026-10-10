@@ -20,7 +20,16 @@ Set real coordinates (CAM_LAT, CAM_LNG), CAM_AREA, and `ALERT_THRESHOLD=10`. No 
 sudo systemctl restart hackformiami-site
 ```
 `PREVIEW_INTERVAL=2` provides a low-frame-rate live preview suitable for a Raspberry Pi and USB camera. `INTERVAL=10` independently controls paid AI analysis. Pausing AI in the Manager does not stop preview capture.
-Test speaker locally: `espeak-ng "This is a Four Forces speaker test."`. Check your output routing with `aplay -l`. Confirm `rpicam-still` or `fswebcam` is available and that the camera points only where you have permission to record.
+
+For a USB webcam, set:
+
+```text
+CAPTURE=usb
+# Optional stable path from: ls -l /dev/v4l/by-id/
+CAM_DEVICE=/dev/v4l/by-id/usb-YOUR_CAMERA-video-index0
+```
+
+Leave `CAM_DEVICE` empty to rediscover `/dev/v4l/by-id/*` and `/dev/video*` automatically after disconnects. Use `CAPTURE=csi` only for a Raspberry Pi CSI camera. Test speaker locally with `espeak-ng "This is a Four Forces speaker test."` and check audio routing with `aplay -l`.
 
 For a supervised local test, start with:
 ```bash
