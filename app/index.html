@@ -35,147 +35,123 @@
   :focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; border-radius: 4px; }
   .label-sm { font-size: .8125rem; line-height: 1.25rem; font-weight: 500; letter-spacing: -.005em; font-variant-numeric: tabular-nums; }
   .hairline { border-color: var(--line); }
-  .reveal { opacity: 0; transform: translateY(18px); transition: opacity .9s var(--ease), transform .9s var(--ease); }
-  .reveal.is-in { opacity: 1; transform: none; }
-  @keyframes pulse-ring { 0% { transform: scale(.6); opacity: .7; } 100% { transform: scale(2.4); opacity: 0; } }
-  @keyframes scan { 0% { transform: translateY(-10%); opacity: 0; } 10%, 90% { opacity: 1; } 100% { transform: translateY(110%); opacity: 0; } }
-  @keyframes drift { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-  @keyframes sweep { from { transform: translateX(-100%); } to { transform: translateX(400%); } }
-  @keyframes stage-in { from { opacity: 0; clip-path: circle(12% at 50% 60%); filter: blur(6px); } to { opacity: 1; clip-path: circle(120% at 50% 60%); filter: blur(0); } }
+  @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
   @keyframes pulse { 50% { opacity: .4; } }
   @keyframes spin { to { transform: rotate(360deg); } }
+  .lbl { margin: 0; font-size: .75rem; font-weight: 500; line-height: 1.2; color: var(--dim); }
+  .src { margin: 10px 0 0; font-size: .6875rem; line-height: 1.3; color: var(--dim); font-variant-numeric: tabular-nums; }
+  .num { font-variant-numeric: tabular-nums; }
 
   #app { position: relative; height: 100%; max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; overflow: hidden;
     padding-top: env(safe-area-inset-top);
-    background: radial-gradient(120% 55% at 50% 0%, #1a45dc 0%, #0e2a8f 32%, rgb(10 31 69 / 0) 75%), linear-gradient(180deg, var(--trench) 0%, var(--abyss) 60%); }
+    background: linear-gradient(180deg, var(--trench) 0, var(--abyss) 260px); }   /* the one gradient */
   header { display: flex; align-items: center; height: 52px; padding: 0 16px; }
   .wm { flex: 1; display: inline-flex; align-items: center; font-size: 1.3rem; color: var(--foam); }
   .wm > span { display: inline-flex; align-items: baseline; font-weight: 600; letter-spacing: -.045em; line-height: 1; }
   .eye { width: .74em; height: .74em; margin: 0 .02em; transform: translateY(.03em); align-self: baseline; overflow: visible; }
   #eyes { transform-origin: 50px 50px; transition: transform .16s var(--ease); }
   #eyes ellipse { transition: all .22s; }
-  .ib { position: relative; width: 40px; height: 40px; border-radius: 50%; border: 1px solid rgb(238 244 255 / .15); background: rgb(238 244 255 / .08);
+  .ib { position: relative; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); background: transparent;
     color: var(--foam); display: grid; place-items: center; cursor: pointer; padding: 0; }
-  .ib svg, .tab svg, .seg svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-  #belldot { position: absolute; top: 6px; right: 7px; width: 9px; height: 9px; border-radius: 50%; background: var(--sev-severe); border: 2px solid #12328f; }
-  #sub { display: flex; align-items: center; justify-content: space-between; padding: 0 16px 10px; gap: 8px; }
-  #loc { margin: 0; color: var(--foam); font-size: .8125rem; font-weight: 500; }
-  .chip { font-size: 11px; font-weight: 500; border: 1px solid; border-radius: 999px; padding: 2px 9px; background: rgb(3 8 20 / .35); }
-  .chip.live { color: var(--sev-none); border-color: rgb(76 195 138 / .4); }
-  .chip.off { color: var(--sev-low); border-color: rgb(242 209 75 / .4); }
+  .ib svg, .tab svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+  #belldot { position: absolute; top: 8px; right: 9px; width: 8px; height: 8px; border-radius: 50%; background: var(--sev-severe); }
+  #sub { display: flex; align-items: baseline; justify-content: space-between; padding: 0 16px 12px; gap: 8px; font-size: .8125rem; color: var(--mist); }
+  #sub p { margin: 0; }
+  #live { font-size: .75rem; color: var(--dim); font-variant-numeric: tabular-nums; }
+  #live.off { color: var(--sev-moderate); }
 
   main { position: relative; flex: 1; min-height: 0; }
   .screen { position: absolute; inset: 0; overflow-y: auto; padding: 0 16px 16px; display: none; flex-direction: column; gap: 12px; }
   .screen.on { display: flex; }
   #s-map { padding: 0; }
-  h2 { margin: 4px 0 0; font-size: 1.5rem; font-weight: 600; letter-spacing: -.04em; }
-  .card { border: 1px solid var(--line); border-radius: 16px; background: rgb(6 21 47 / .5); padding: 14px; }
+  h2 { margin: 4px 0 0; font-size: 1.5rem; font-weight: 600; letter-spacing: -.03em; }
+  .card, .tidecard, #status, .arow { border: 1px solid var(--line); border-radius: 14px; background: var(--deep); padding: 16px; }
 
-  /* tide card */
-  .tidecard { --rc: var(--sev-moderate); position: relative; border: 1px solid rgb(238 244 255 / .16); border-radius: 20px; padding: 14px 16px 12px;
-    background: linear-gradient(135deg, rgb(40 104 255 / .4), color-mix(in srgb, var(--rc) 38%, transparent));
-    -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
-  .tidecard .k { display: flex; align-items: center; gap: 6px; font-size: .75rem; color: var(--mist); font-weight: 500; }
-  .tidecard .k svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-  .tidecard .big { margin: 2px 0 0; font-size: 1.7rem; font-weight: 600; letter-spacing: -.04em; line-height: 1.1; color: var(--rc); }
-  .tidecard .king { position: absolute; top: 12px; right: 14px; font-size: .6875rem; color: var(--mist); background: rgb(238 244 255 / .12); border-radius: 999px; padding: 2px 9px; }
-  .tidecard svg.curve { display: block; width: 100%; height: 70px; margin-top: 4px; overflow: visible; }
-  .tidecard .foot { display: flex; justify-content: space-between; font-size: .75rem; color: var(--mist); font-variant-numeric: tabular-nums; }
+  /* tide */
+  .tidecard { --rc: var(--sev-moderate); }
+  .tidecard .top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .tidecard .big { margin: 6px 0 0; font-size: 2.5rem; font-weight: 600; letter-spacing: -.04em; line-height: 1; color: var(--rc); }
+  .tidecard svg.curve { display: block; width: 100%; height: 64px; margin-top: 12px; overflow: visible; }
+  .tidecard .foot { display: flex; justify-content: space-between; margin-top: 6px; font-size: .75rem; color: var(--mist); font-variant-numeric: tabular-nums; }
 
   /* map card / full map */
-  #mapslot { position: relative; height: 230px; flex: none; border-radius: 20px; overflow: hidden; border: 1px solid rgb(238 244 255 / .16); }
+  #mapslot { position: relative; height: 230px; flex: none; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); }
   #s-map .mapwrap { border-radius: 0; }
   .mapwrap { position: absolute; inset: 0; }
   #map { position: absolute; inset: 0; background: var(--abyss); }
   .leaflet-tile-pane { filter: brightness(.88) saturate(1.05); }   /* satellite, a touch darker so pins and labels pop */
   .osm-dark { filter: invert(1) hue-rotate(180deg) brightness(.85) contrast(.9); }
-  #rcount { position: absolute; top: 10px; left: 10px; z-index: 500; font-size: .6875rem; font-weight: 500; color: var(--foam);
-    background: rgb(3 8 20 / .75); border-radius: 999px; padding: 2px 9px; pointer-events: none; }
+  #rcount { margin: -4px 2px 0; }
+  #rcount p { margin: 0; font-size: .8125rem; color: var(--mist); font-variant-numeric: tabular-nums; }
+  #rcount .src { margin-top: 2px; }
 
-  /* alert / status card */
-  #status { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 16px;
-    background: rgb(6 21 47 / .5); transition: border-color .5s, background-color .5s; }
-  #status.pop { animation: stage-in .7s var(--ease) both; }
-  .aico { flex: none; width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: rgb(238 244 255 / .1); }
-  .aico svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  /* nearby status / alerts */
+  #status { display: flex; align-items: center; gap: 12px; }
+  #status.pop { animation: fade .4s var(--ease) both; }
   .txt { flex: 1; min-width: 0; }
-  #status h1, .arow h3 { margin: 0; font-size: 1rem; font-weight: 600; letter-spacing: -.02em; line-height: 1.25; }
-  #status p, .arow p { margin: 2px 0 0; color: var(--mist); font-size: .8125rem; line-height: 1.35; }
-  .listen { flex: none; display: inline-flex; align-items: center; gap: 5px; height: 32px; padding: 0 12px; border: 0; border-radius: 999px;
-    background: var(--foam); color: var(--abyss); font-size: .8125rem; font-weight: 600; cursor: pointer; }
-  .listen svg { width: 11px; height: 11px; fill: currentColor; stroke: none; }
-  #status.alert, .arow { border-color: rgb(255 77 77 / .45); background: rgb(255 77 77 / .1); }
-  #status.alert .aico, .arow .aico { background: rgb(255 77 77 / .2); color: var(--sev-severe); }
-  #status.maybe { border-color: rgb(255 155 61 / .35); background: rgb(255 155 61 / .1); }
-  #status.maybe .aico { background: rgb(255 155 61 / .2); color: var(--sev-moderate); }
-  #status.ok { border-color: rgb(101 217 242 / .2); background: rgb(101 217 242 / .06); }
-  #status.ok .aico { background: rgb(76 195 138 / .2); color: var(--sev-none); }
-  .arow { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid; border-radius: 16px; }
+  #status h1, .arow h3 { margin: 6px 0 0; font-size: 1.5rem; font-weight: 600; letter-spacing: -.03em; line-height: 1.1; }
+  .arow h3 { font-size: 1.0625rem; margin-top: 0; letter-spacing: -.02em; }
+  #status p.sub, .arow p { margin: 4px 0 0; color: var(--mist); font-size: .875rem; line-height: 1.35; }
+  .listen { flex: none; display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px; border: 1px solid rgb(238 244 255 / .25);
+    border-radius: 10px; background: transparent; color: var(--foam); font-size: .8125rem; font-weight: 500; cursor: pointer; }
+  .listen svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linejoin: round; }
+  #status.alert h1, .arow h3 { color: var(--foam); }
+  #status.alert h1 { color: var(--sev-severe); }
+  #status.maybe h1 { color: var(--sev-moderate); }
+  #status.ok h1 { color: var(--sev-none); }
+  .arow { display: flex; align-items: center; gap: 12px; }
   .empty { color: var(--dim); text-align: center; padding: 24px 0; font-size: .9rem; }
 
   .segs { display: flex; gap: 8px; }
-  .seg { flex: 1; height: 44px; border-radius: 12px; border: 1px solid var(--line); background: rgb(238 244 255 / .04); color: var(--mist); font-weight: 500; cursor: pointer; }
-  .seg[aria-pressed=true] { background: var(--foam); color: var(--abyss); }
+  .seg { flex: 1; height: 44px; border-radius: 10px; border: 1px solid var(--line); background: transparent; color: var(--mist); font-weight: 500; cursor: pointer; }
+  .seg[aria-pressed=true] { background: var(--foam); border-color: var(--foam); color: var(--abyss); }
   .meid { color: var(--dim); font-size: .75rem; }
 
   /* tab bar */
   #tabs { position: relative; z-index: 1600; display: grid; grid-template-columns: repeat(5, 1fr); align-items: end;
-    border-top: 1px solid var(--line); background: rgb(3 8 20 / .85); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
-    padding: 8px 0 calc(8px + env(safe-area-inset-bottom)); }
+    border-top: 1px solid var(--line); background: var(--abyss); padding: 8px 0 calc(8px + env(safe-area-inset-bottom)); }
   .tab { background: none; border: 0; padding: 4px 0; color: var(--dim); display: flex; flex-direction: column; align-items: center; gap: 3px;
-    font-size: .625rem; font-weight: 500; cursor: pointer; }
-  .tab[aria-current=page] { color: var(--cyan); }
-  .fab { justify-self: center; width: 56px; height: 56px; margin-top: -26px; border-radius: 50%; border: 0; padding: 0; display: grid; place-items: center;
-    background: var(--cyan); color: var(--abyss); cursor: pointer; box-shadow: 0 0 0 4px var(--abyss), 0 10px 30px -6px rgb(101 217 242 / .7); transition: transform .3s var(--ease); }
-  .fab svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; }
+    font-size: .6875rem; font-weight: 500; cursor: pointer; }
+  .tab[aria-current=page] { color: var(--foam); }
+  .fab { justify-self: center; width: 52px; height: 52px; margin-top: -20px; border-radius: 50%; border: 4px solid var(--abyss); padding: 0; display: grid; place-items: center;
+    background: var(--foam); color: var(--abyss); cursor: pointer; transition: transform .25s var(--ease); }
+  .fab svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
   .fab.open { transform: rotate(45deg); }
 
-  /* report pins, same recipe as MiamiMap.tsx: soft halo + core with dark stroke (dashed = unconfirmed) */
+  /* report pins: flat halo + core with a dark stroke (dashed = unconfirmed, gray = analyzing) */
   .pin { position: relative; width: 20px; height: 20px; display: grid; place-items: center; }
-  .pin::before { content: ""; position: absolute; inset: 0; border-radius: 50%; background: var(--c); opacity: .18; }
-  .pin::after { content: ""; position: absolute; inset: 5px; border-radius: 50%; background: var(--c); opacity: 0; }
-  .pin.ring::after, .pin.an::after { animation: pulse-ring 2.4s ease-out infinite; }
+  .pin::before { content: ""; position: absolute; inset: 0; border-radius: 50%; background: var(--c); opacity: .22; }
   .pin b { position: relative; width: 9px; height: 9px; border-radius: 50%; background: var(--c); border: 1.5px solid var(--abyss); box-sizing: content-box; margin: -1.5px; }
   .pin.unc b { border-style: dashed; }
-  .me { position: relative; margin: 2px; width: 14px; height: 14px; border-radius: 50%; background: var(--electric); border: 2px solid var(--foam); }
-  .me::after { content: ""; position: absolute; inset: -2px; border-radius: 50%; background: var(--electric); animation: pulse-ring 2.4s ease-out infinite; }
-  .pick { margin: 1px; width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--cyan); background: rgb(101 217 242 / .3); }
-  .leaflet-popup-content-wrapper, .leaflet-popup-tip { background: rgb(6 21 47 / .9); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
-    color: var(--foam); border: 1px solid var(--line); }
-  .leaflet-popup-content-wrapper { border-radius: 16px; }
-  .leaflet-popup-content { font-size: 14px; line-height: 1.5; margin: 10px 12px; color: var(--mist); }
+  .me { margin: 2px; width: 14px; height: 14px; border-radius: 50%; background: var(--electric); border: 2px solid var(--foam); }
+  .pick { margin: 1px; width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--foam); background: rgb(238 244 255 / .25); }
+  .leaflet-popup-content-wrapper, .leaflet-popup-tip { background: var(--deep); color: var(--foam); border: 1px solid var(--line); box-shadow: none; }
+  .leaflet-popup-content-wrapper { border-radius: 12px; }
+  .leaflet-popup-content { font-size: .875rem; line-height: 1.45; margin: 10px 12px; color: var(--mist); }
   .leaflet-popup-content b { color: var(--foam); font-weight: 600; }
   .leaflet-container a.leaflet-popup-close-button { color: var(--mist); }
-  .leaflet-control-attribution { background: rgb(3 8 20 / .7) !important; color: var(--dim) !important; }
+  .leaflet-control-attribution { background: rgb(3 8 20 / .75) !important; color: var(--dim) !important; }
   .leaflet-control-attribution a { color: var(--mist) !important; }
 
-  /* chat bubbles: same card as the Assistant response */
+  /* report composer */
   #chat { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
-  .bub { align-self: flex-start; max-width: 92%; font-size: .95rem; line-height: 1.5; color: var(--mist); padding: 12px 16px;
-    border: 1px solid var(--line); border-radius: 16px; background: rgb(6 21 47 / .8);
-    -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); animation: stage-in .7s var(--ease) both; }
-  .bub.err { color: var(--sev-moderate); border-color: rgb(255 155 61 / .3); }
-  .bub b { display: block; font-weight: 500; line-height: 1.3; }
+  .bub { align-self: flex-start; max-width: 92%; font-size: .9375rem; line-height: 1.45; color: var(--mist); padding: 12px 14px;
+    border: 1px solid var(--line); border-radius: 14px; background: var(--deep); animation: fade .4s var(--ease) both; }
+  .bub.err { color: var(--sev-moderate); }
+  .bub b { display: block; font-weight: 600; line-height: 1.3; }
   .bub span.sub { display: block; margin-top: 4px; }
-  .spin { display: inline-block; width: 13px; height: 13px; border: 2px solid var(--cyan); border-right-color: transparent;
+  .spin { display: inline-block; width: 13px; height: 13px; border: 2px solid var(--mist); border-right-color: transparent;
     border-radius: 50%; animation: spin 1s linear infinite; vertical-align: -2px; }
-
-  /* composer: same box as the Assistant input */
-  #dock { position: absolute; left: 0; right: 0; bottom: calc(64px + env(safe-area-inset-bottom)); z-index: 1500; padding: 24px 12px 6px;
-    background: linear-gradient(180deg, transparent, rgb(3 8 20 / .9) 40%); animation: stage-in .5s var(--ease) both; }
-  #dock::before { content: ""; position: absolute; left: -8px; right: -8px; bottom: -30px; height: 96px; border-radius: 50%; filter: blur(40px);
-    background: radial-gradient(60% 60% at 50% 70%, rgb(40 104 255 / .4), transparent 70%); opacity: .4; transition: opacity .7s; pointer-events: none; }
-  #dock:focus-within::before { opacity: 1; }
-  #dock.rec::before { background: radial-gradient(60% 60% at 50% 70%, rgb(255 77 77 / .35), transparent 70%); opacity: 1; }
-  #box { position: relative; background: rgb(6 21 47 / .8); border: 1px solid rgb(238 244 255 / .15); border-radius: 16px; padding: 8px;
-    -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px); transition: border-color .3s; }
+  #dock { position: absolute; left: 0; right: 0; bottom: calc(60px + env(safe-area-inset-bottom)); z-index: 1500; padding: 12px 12px 8px;
+    background: var(--abyss); border-top: 1px solid var(--line); animation: fade .3s var(--ease) both; }
+  #box { background: var(--deep); border: 1px solid var(--line); border-radius: 14px; padding: 8px; transition: border-color .2s; }
   #box:focus-within { border-color: rgb(238 244 255 / .35); }
-  #box.rec { border-color: rgb(255 77 77 / .7); }
+  #box.rec { border-color: var(--sev-severe); }
   #thumbwrap { padding-bottom: 8px; }
-  .th { position: relative; display: inline-block; width: 64px; height: 64px; border-radius: 12px; overflow: hidden; border: 1px solid var(--line); }
+  .th { position: relative; display: inline-block; width: 64px; height: 64px; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); }
   .th img { width: 100%; height: 100%; object-fit: cover; display: block; }
   #rm { position: absolute; top: 3px; right: 3px; width: 20px; height: 20px; padding: 0; border: 0; border-radius: 50%;
-    background: rgb(3 8 20 / .75); color: var(--foam); display: grid; place-items: center; cursor: pointer; }
+    background: rgb(3 8 20 / .8); color: var(--foam); display: grid; place-items: center; cursor: pointer; }
   #rm svg { width: 12px; height: 12px; }
   #textin { display: block; width: 100%; min-height: 44px; max-height: 160px; resize: none; border: 0; background: transparent;
     padding: 10px 8px; color: var(--foam); font-size: 1rem; line-height: 1.5; }
@@ -184,39 +160,36 @@
   #textin::-webkit-scrollbar-thumb { background: rgb(169 184 211 / .25); border-radius: 3px; }
   ::placeholder { color: var(--dim); }
   #recui { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 10px 0 4px; }
-  #timer { display: flex; align-items: center; gap: 8px; font: .8125rem ui-monospace, monospace; color: var(--mist); font-variant-numeric: tabular-nums; }
+  #timer { display: flex; align-items: center; gap: 8px; font-size: .875rem; color: var(--mist); font-variant-numeric: tabular-nums; }
   #timer i { width: 8px; height: 8px; border-radius: 50%; background: var(--sev-severe); animation: pulse 1s infinite; }
   #bars { display: flex; align-items: center; justify-content: center; gap: 2px; height: 36px; }
-  #bars i { width: 2px; border-radius: 2px; background: rgb(101 217 242 / .6); animation: pulse 1s ease-in-out infinite; }
+  #bars i { width: 2px; border-radius: 2px; background: var(--mist); animation: pulse 1s ease-in-out infinite; }
   .actions { display: flex; align-items: center; justify-content: space-between; padding-top: 4px; }
-  .rb { width: 44px; height: 44px; border-radius: 12px; border: 0; padding: 0; display: grid; place-items: center; cursor: pointer;
-    background: transparent; color: var(--mist); transition: background-color .2s, color .2s, transform .2s; }
-  .rb:hover { background: rgb(238 244 255 / .1); color: var(--foam); }
-  .rb:active { transform: scale(.95); }
-  .rb svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .rb { width: 44px; height: 44px; border-radius: 10px; border: 0; padding: 0; display: grid; place-items: center; cursor: pointer;
+    background: transparent; color: var(--mist); transition: background-color .2s, color .2s; }
+  .rb:hover { background: rgb(238 244 255 / .08); color: var(--foam); }
+  .rb svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
   #main[data-s=send], #main[data-s=sending] { background: var(--foam); color: var(--abyss); }
-  #main[data-s=send]:hover { background: #fff; }
   #main[data-s=sending] { cursor: default; }
   #main[data-s=sending] svg { width: 16px; height: 16px; fill: currentColor; stroke: none; animation: pulse 1s infinite; }
-  #main[data-s=rec] { background: rgb(101 217 242 / .2); color: var(--cyan); }
+  #main[data-s=rec] { color: var(--sev-severe); }
   #box.rec #attach { visibility: hidden; }
-  #hint { margin: 10px 0 0; text-align: center; font-size: .8125rem; line-height: 1.25rem; font-weight: 500; color: var(--dim); }
+  #hint { margin: 8px 0 0; text-align: center; font-size: .75rem; line-height: 1.25; color: var(--dim); }
   /* 3D water-level overlay */
-  .p3d { display: block; margin-top: 8px; height: 32px; padding: 0 12px; border: 1px solid rgb(101 217 242 / .4); border-radius: 999px;
-    background: rgb(101 217 242 / .12); color: var(--cyan); font-size: .8125rem; font-weight: 500; cursor: pointer; }
-  #v3 { position: fixed; inset: 0; z-index: 3000; display: flex; flex-direction: column;
-    background: radial-gradient(120% 60% at 50% 0%, #0e2a8f 0%, rgb(10 31 69 / 0) 70%), linear-gradient(180deg, var(--trench), var(--abyss) 70%); animation: stage-in .5s var(--ease) both; }
+  .p3d { display: block; margin-top: 8px; height: 32px; padding: 0 12px; border: 1px solid rgb(238 244 255 / .25); border-radius: 8px;
+    background: transparent; color: var(--foam); font-size: .8125rem; font-weight: 500; cursor: pointer; }
+  #v3 { position: fixed; inset: 0; z-index: 3000; display: flex; flex-direction: column; background: var(--abyss); animation: fade .3s var(--ease) both; }
   #v3x { position: absolute; top: calc(12px + env(safe-area-inset-top)); right: 12px; z-index: 2; width: 40px; height: 40px; border-radius: 50%;
-    border: 1px solid rgb(238 244 255 / .15); background: rgb(3 8 20 / .6); color: var(--foam); font-size: 22px; line-height: 1; cursor: pointer; }
+    border: 1px solid var(--line); background: var(--deep); color: var(--foam); font-size: 22px; line-height: 1; cursor: pointer; }
   #v3c { position: relative; flex: 1; min-height: 0; }
   #v3c canvas { display: block; width: 100%; height: 100%; touch-action: none; }
   #v3c svg.side { position: absolute; inset: 0; margin: auto; width: 100%; max-width: 480px; height: auto; }
   .rise { transform-box: fill-box; transform-origin: bottom; animation: rise 2.2s var(--ease) both; }
   @keyframes rise { from { transform: scaleY(0); } to { transform: scaleY(1); } }
   #v3info { padding: 4px 20px calc(18px + env(safe-area-inset-bottom)); max-width: 480px; width: 100%; margin: 0 auto; }
-  #v3depth { margin: 0; font-size: clamp(2.6rem, 14vw, 3.6rem); font-weight: 600; letter-spacing: -.045em; line-height: .95; color: var(--cyan); }
-  #v3line { margin: 8px 0 0; font-size: 1.2rem; font-weight: 500; color: var(--foam); }
-  #v3cars { margin: 4px 0 0; color: var(--mist); }
+  #v3depth { margin: 0; font-size: clamp(2.6rem, 14vw, 3.6rem); font-weight: 600; letter-spacing: -.045em; line-height: .95; color: var(--foam); }
+  #v3line { margin: 8px 0 0; font-size: 1.125rem; font-weight: 500; color: var(--mist); }
+  #v3cars { margin: 4px 0 0; color: var(--mist); font-size: .9375rem; }
   #v3cap { margin: 12px 0 0; font-size: .75rem; color: var(--dim); }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; } }
 </style>
@@ -228,15 +201,16 @@
     <span class="wm" id="wm" role="img" aria-label="4forces"><span aria-hidden="true"><span>4f</span><svg class="eye" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="37" fill="none" stroke="currentColor" stroke-width="13"/><g id="eyes"><ellipse cx="40" cy="50" rx="5.6" ry="8.5" fill="currentColor"/><ellipse cx="60" cy="50" rx="5.6" ry="8.5" fill="currentColor"/></g></svg><span>rces</span></span></span>
     <button type="button" class="ib" id="bell" aria-label="Alerts"><svg viewBox="0 0 24 24"><path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/></svg><i id="belldot" hidden></i></button>
   </header>
-  <div id="sub"><p id="loc"></p><span id="live" class="chip off"></span></div>
+  <div id="sub"><p id="loc"></p><span id="live" class="off"></span></div>
 
   <main>
     <section id="s-home" class="screen on">
       <div id="tide" class="tidecard" hidden></div>
-      <div id="mapslot"><div class="mapwrap" id="mapwrap"><span id="rcount"></span><div id="map"></div></div></div>
+      <div id="mapslot"><div class="mapwrap" id="mapwrap"><div id="map"></div></div></div>
+      <div id="rcount"></div>
       <div id="status" class="ok">
-        <span class="aico"></span><div class="txt"><h1></h1><p></p></div>
-        <button type="button" class="listen" id="listen" hidden><svg viewBox="0 0 24 24"><path d="M6 3l14 9-14 9z"/></svg><span></span></button>
+        <div class="txt"><p class="lbl" id="slbl"></p><h1></h1><p class="sub"></p><p class="src" id="ssrc"></p></div>
+        <button type="button" class="listen" id="listen" hidden><svg viewBox="0 0 24 24"><path d="M6 4l13 8-13 8z"/></svg><span></span></button>
       </div>
     </section>
     <section id="s-map" class="screen"></section>
@@ -301,9 +275,10 @@ const TYPES = {
     other: ["Ijans toupre ou", "Posib ijans toupre", "ijans"] },
 };
 const T = {
-  en: { view3d: "3D water level", illus: "Illustration based on AI depth estimate, not a survey.", lvls: ["Below the curb", "Above the curb", "Halfway up the wheels", "At the car doors", "Knee-deep"], close: "Close",
+  en: { updated: "updated", r2km: "Near you · 2 km", lowT: "Low", srcN: "Neighbor reports", srcT: "NOAA",
+    view3d: "3D water level", illus: "Illustration based on AI depth estimate, not a survey.", lvls: ["Below the curb", "Above the curb", "Halfway up the wheels", "At the car doors", "Knee-deep"], close: "Close",
     navHome: "Home", navMap: "Map", navAlerts: "Alerts", navMe: "Me", langLabel: "Language", tideRisk: "Tide risk", king: "King-tide window", now: "Now", high: "High", riskw: { low: "Low", elevated: "Elevated", high: "High" }, reports24: "reports · 24 h", listen: "Listen", noAlerts: "No alerts yet.", neighbors: "neighbor reports", ago: "min ago", test: "test alert", live: "Live", offline: "Offline", yourLoc: "Your location", miami: "Miami, Florida", reporter: "Reporter ID",
-    textph: "Report flooding: add a photo or describe what you see", hint: "📍 Your location · tap the map to change",
+    textph: "Report flooding: add a photo or describe what you see", hint: "Using your location · tap the map to change",
     none: "No flooding near you", nexthigh: "Next high tide", warn: "Don't walk or drive through water", unconf: "Not confirmed yet",
     analyzing: "Analyzing...", unconfirmed: "Unconfirmed", sev: { none: "No", low: "Minor", moderate: "Moderate", severe: "Severe" },
     about: "about", in: "in", cars: "Cars can pass", nocars: "Cars can't pass",
@@ -311,9 +286,10 @@ const T = {
     thanksPhoto: "Checking your photo...", thanks: "Checking your report...", failed: "Couldn't read this report. Please try again.",
     e400: "Add a photo or text.", e413: "Photo too large (max 10 MB).", e502: "AI failed, please try again.", eNet: "Network error, try again.",
     nomic: "Voice not supported here.", listening: "Listening..." },
-  es: { view3d: "Nivel del agua en 3D", illus: "Ilustración basada en una estimación de profundidad de la IA, no en un levantamiento.", lvls: ["Debajo del borde de la acera", "Sobre el borde de la acera", "A media altura de las ruedas", "A la altura de las puertas del auto", "A la altura de la rodilla"], close: "Cerrar",
+  es: { updated: "actualizado", r2km: "Cerca de usted · 2 km", lowT: "Baja", srcN: "Reportes de vecinos", srcT: "NOAA",
+    view3d: "Nivel del agua en 3D", illus: "Ilustración basada en una estimación de profundidad de la IA, no en un levantamiento.", lvls: ["Debajo del borde de la acera", "Sobre el borde de la acera", "A media altura de las ruedas", "A la altura de las puertas del auto", "A la altura de la rodilla"], close: "Cerrar",
     navHome: "Inicio", navMap: "Mapa", navAlerts: "Alertas", navMe: "Yo", langLabel: "Idioma", tideRisk: "Riesgo de marea", king: "Marea viva", now: "Ahora", high: "Alta", riskw: { low: "Bajo", elevated: "Elevado", high: "Alto" }, reports24: "reportes · 24 h", listen: "Escuchar", noAlerts: "Aún no hay alertas.", neighbors: "reportes de vecinos", ago: "min", test: "alerta de prueba", live: "En vivo", offline: "Sin conexión", yourLoc: "Su ubicación", miami: "Miami, Florida", reporter: "ID de reportero",
-    textph: "Reporte una inundación: agregue una foto o describa lo que ve", hint: "📍 Su ubicación · toque el mapa para cambiarla",
+    textph: "Reporte una inundación: agregue una foto o describa lo que ve", hint: "Usando su ubicación · toque el mapa para cambiarla",
     none: "Sin inundación cerca de usted", nexthigh: "Próxima marea alta", warn: "No camine ni conduzca por el agua", unconf: "Aún sin confirmar",
     analyzing: "Analizando...", unconfirmed: "Sin confirmar", sev: { none: "Sin", low: "Leve", moderate: "Moderada", severe: "Grave" },
     about: "aprox.", in: "pulg", cars: "Los autos pueden pasar", nocars: "Los autos no pueden pasar",
@@ -321,9 +297,10 @@ const T = {
     thanksPhoto: "Revisando su foto...", thanks: "Revisando su reporte...", failed: "No pudimos leer este reporte. Intente de nuevo.",
     e400: "Agregue una foto o texto.", e413: "Foto muy grande (máx. 10 MB).", e502: "Falló la IA, intente de nuevo.", eNet: "Error de red, intente de nuevo.",
     nomic: "Voz no disponible aquí.", listening: "Escuchando..." },
-  ht: { view3d: "Nivo dlo an 3D", illus: "Ilistrasyon ki baze sou estimasyon pwofondè IA a, se pa yon mezi egzak.", lvls: ["Anba trotwa a", "Anwo trotwa a", "Mwatye wou yo", "Nan pòt machin yo", "Jiska jenou"], close: "Fèmen",
+  ht: { updated: "mizajou", r2km: "Toupre ou · 2 km", lowT: "Ba", srcN: "Rapò vwazen", srcT: "NOAA",
+    view3d: "Nivo dlo an 3D", illus: "Ilistrasyon ki baze sou estimasyon pwofondè IA a, se pa yon mezi egzak.", lvls: ["Anba trotwa a", "Anwo trotwa a", "Mwatye wou yo", "Nan pòt machin yo", "Jiska jenou"], close: "Fèmen",
     navHome: "Akèy", navMap: "Kat", navAlerts: "Alèt", navMe: "Mwen", langLabel: "Lang", tideRisk: "Risk mare", king: "Mare vivan", now: "Kounye a", high: "Wo", riskw: { low: "Ba", elevated: "Wo", high: "Trè wo" }, reports24: "rapò · 24 è", listen: "Koute", noAlerts: "Poko gen alèt.", neighbors: "rapò vwazen", ago: "min", test: "alèt tès", live: "An dirèk", offline: "Dekonekte", yourLoc: "Kote ou ye", miami: "Miami, Florid", reporter: "ID rapòtè",
-    textph: "Rapòte inondasyon: ajoute yon foto oswa dekri sa ou wè", hint: "📍 Kote ou ye · touche kat la pou chanje l",
+    textph: "Rapòte inondasyon: ajoute yon foto oswa dekri sa ou wè", hint: "Ap itilize kote ou ye · touche kat la pou chanje l",
     none: "Pa gen inondasyon toupre ou", nexthigh: "Pwochen mare wo", warn: "Pa mache ni kondui nan dlo a", unconf: "Poko konfime",
     analyzing: "Analiz...", unconfirmed: "Pa konfime", sev: { none: "Pa gen", low: "Ti", moderate: "Mwayen", severe: "Grav" },
     about: "anviwon", in: "pous", cars: "Machin ka pase", nocars: "Machin pa ka pase",
@@ -398,31 +375,31 @@ function drawReports() {
 }
 
 // --- status card (2 km around the user) ---
-const AICON = {
-  warn: '<svg viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4M12 17h.01"/></svg>',
-  ok: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>',
-};
-let listenAlert = null, allAlerts = [], online = false;
+let listenAlert = null, allAlerts = [], online = false, updatedAt = null;
 const mins = iso => Math.max(0, Math.round((Date.now() - new Date(iso)) / 60000));
 
 function drawStatus() {
   const near = p => me && dist(me, p) <= RADIUS;
-  const el = $("status"), h = el.querySelector("h1"), p = el.querySelector("p");
+  const el = $("status"), h = el.querySelector("h1"), p = el.querySelector(".sub");
   const alert = lastAlert && near(lastAlert) ? lastAlert : null;
   const prev = el.className + h.textContent;
   // ponytail: alerts/reports without a known user location show as "nothing nearby"
   const maybe = reports.filter(r => !isAnalyzing(r) && ["moderate", "severe"].includes(r.analysis.severity) && near(r))
     .sort((a, b) => (b.analysis.severity === "severe") - (a.analysis.severity === "severe"))[0];
+  let src = "";
   if (alert) {
     el.className = "alert"; h.textContent = ty(alert.type, 0);
     p.textContent = [alert.area, t("warn")].filter(Boolean).join(" · ");
+    src = `4forces · ${alert.count} ${t("neighbors")} · ${mins(alert.created_at)} ${t("ago")}${alert.test ? " · " + t("test") : ""}`;
   } else if (maybe) {
     el.className = "maybe"; h.textContent = ty(maybe.analysis.type, 1); p.textContent = t("unconf");
+    src = `${t("srcN")} · ${maybe.area || ""}${maybe.area ? " · " : ""}${mins(maybe.created_at)} ${t("ago")}`;
   } else {
     el.className = "ok"; h.textContent = t("none");
     p.textContent = lastTide && lastTide.next_high ? `${t("nexthigh")} ${hhmm(lastTide.next_high.time)}` : "";
+    src = lastTide ? `${t("srcT")} · ${lastTide.station.split(",")[0]}` : "";
   }
-  el.querySelector(".aico").innerHTML = el.className === "ok" ? AICON.ok : AICON.warn;
+  $("slbl").textContent = t("r2km"); $("ssrc").textContent = src;
   listenAlert = alert; $("listen").hidden = !alert;
   if (prev !== el.className + h.textContent) { el.classList.remove("pop"); void el.offsetWidth; el.classList.add("pop"); }
 }
@@ -442,39 +419,41 @@ function drawTide() {
   el.hidden = !d;
   if (!d) return;
   el.style.setProperty("--rc", css({ low: "--sev-none", elevated: "--sev-moderate", high: "--sev-severe" }[d.risk] || "--sev-moderate"));
-  const pts = (d.upcoming || []).slice(0, 5).map(x => ({ t: +new Date(x.time), h: x.height_ft }));
+  const up = d.upcoming || [], pts = up.slice(0, 5).map(x => ({ t: +new Date(x.time), h: x.height_ft }));
   let curve = "";
   if (pts.length > 1) {
-    const W = 300, H = 70, t0 = pts[0].t, t1 = pts[pts.length - 1].t;
+    const W = 300, H = 64, t0 = pts[0].t, t1 = pts[pts.length - 1].t;
     const lo = Math.min(...pts.map(x => x.h)), hi = Math.max(...pts.map(x => x.h));
-    const X = x => (x.t - t0) / (t1 - t0 || 1) * W, Y = x => H - 8 - (x.h - lo) / (hi - lo || 1) * (H - 22);
+    const X = x => (x.t - t0) / (t1 - t0 || 1) * W, Y = x => H - 6 - (x.h - lo) / (hi - lo || 1) * (H - 14);
     let path = `M${X(pts[0])},${Y(pts[0])}`;
     for (let i = 1; i < pts.length; i++) { const m = (X(pts[i - 1]) + X(pts[i])) / 2; path += ` C${m},${Y(pts[i - 1])} ${m},${Y(pts[i])} ${X(pts[i])},${Y(pts[i])}`; }
     const nx = Math.min(W, Math.max(0, (Date.now() - t0) / (t1 - t0 || 1) * W));
-    curve = `<svg class="curve" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="tg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--rc)" stop-opacity=".35"/><stop offset="1" stop-color="var(--rc)" stop-opacity="0"/></linearGradient></defs>
-      <path d="${path} L${W},${H} L0,${H} Z" fill="url(#tg)"/><path d="${path}" fill="none" stroke="var(--rc)" stroke-width="2" vector-effect="non-scaling-stroke"/>
-      <line x1="${nx}" x2="${nx}" y1="0" y2="${H}" stroke="rgb(238 244 255 / .5)" stroke-dasharray="2 4" vector-effect="non-scaling-stroke"/></svg>`;
+    curve = `<svg class="curve" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><path d="${path}" fill="none" stroke="var(--rc)" stroke-width="1.75" vector-effect="non-scaling-stroke"/>
+      <line x1="${nx}" x2="${nx}" y1="0" y2="${H}" stroke="rgb(238 244 255 / .4)" stroke-dasharray="2 4" vector-effect="non-scaling-stroke"/></svg>`;
   }
-  el.innerHTML = `<p class="k"><svg viewBox="0 0 24 24"><path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/></svg>${t("tideRisk")} · ${esc(d.station.split(",")[0])}</p>
-    <p class="big">${esc(t("riskw")[d.risk] || d.risk)}</p>${d.king_tide_window ? `<span class="king">${t("king")}</span>` : ""}${curve}
-    <div class="foot"><span>${t("now")}</span><span>${d.next_high ? `${t("high")} ${hhmm(d.next_high.time)} · ${Number(d.next_high.height_ft).toFixed(2)} ft` : ""}</span></div>`;
+  const low = up.find(x => x.type === "L");
+  el.innerHTML = `<div class="top"><p class="lbl">${t("tideRisk")}</p>${d.king_tide_window ? `<p class="lbl">${t("king")}</p>` : ""}</div>
+    <p class="big">${esc(t("riskw")[d.risk] || d.risk)}</p>${curve}
+    <div class="foot"><span>${low ? `${t("lowT")} ${hhmm(low.time)} · ${Number(low.height_ft).toFixed(2)} ft` : t("now")}</span><span>${d.next_high ? `${t("high")} ${hhmm(d.next_high.time)} · ${Number(d.next_high.height_ft).toFixed(2)} ft` : ""}</span></div>
+    <p class="src">${t("srcT")} · ${esc(d.station)} · ${t("updated")} ${hhmm(d.updated_at)}${d.stale ? " · stale" : ""}</p>`;
 }
 
 function drawAlerts() {
   $("belldot").hidden = !lastAlert;
-  $("alist").innerHTML = allAlerts.length ? allAlerts.map((a, i) => `<div class="arow"><span class="aico">${AICON.warn}</span>
-    <div class="txt"><h3>${esc(ty(a.type, 0).replace(/ (near you|cerca de usted|toupre ou)$/, ""))} · ${esc(a.area || "")}</h3>
-    <p>${a.count} ${t("neighbors")} · ${mins(a.created_at)} ${t("ago")}${a.test ? " · " + t("test") : ""}</p></div>
-    <button type="button" class="listen" data-i="${i}"><svg viewBox="0 0 24 24"><path d="M6 3l14 9-14 9z"/></svg><span>${t("listen")}</span></button></div>`).join("")
+  $("alist").innerHTML = allAlerts.length ? allAlerts.map((a, i) => `<div class="arow"><div class="txt"><h3>${esc(ty(a.type, 2))}${a.area ? " · " + esc(a.area) : ""}</h3>
+    <p class="num">${a.count} ${t("neighbors")} · ${mins(a.created_at)} ${t("ago")}${a.test ? " · " + t("test") : ""}</p></div>
+    <button type="button" class="listen" data-i="${i}"><svg viewBox="0 0 24 24"><path d="M6 4l13 8-13 8z"/></svg><span>${t("listen")}</span></button></div>`).join("")
     : `<p class="empty">${t("noAlerts")}</p>`;
 }
 $("alist").onclick = e => { const b = e.target.closest("[data-i]"); if (b) speak(allAlerts[b.dataset.i]); };
 
 function drawChrome() {
-  $("rcount").textContent = `${reports.length} ${t("reports24")}`;
-  $("loc").textContent = "📍 " + (me ? t("yourLoc") : t("miami"));
-  $("live").className = "chip " + (online ? "live" : "off");
-  $("live").textContent = online ? t("live") : t("offline");
+  const n = c => reports.filter(r => !isAnalyzing(r) && r.analysis.severity === c).length;
+  const sev = ["severe", "moderate", "low"].map(c => [n(c), c]).filter(x => x[0]).map(x => `${x[0]} ${t("sev")[x[1]].toLowerCase()}`).join(", ");
+  $("rcount").innerHTML = `<p>${reports.length} ${t("reports24")}${sev ? " · " + sev : ""}</p><p class="src">${t("srcN")} · ${t("updated")} ${updatedAt ? hhmm(updatedAt) : "–"}</p>`;
+  $("loc").textContent = me ? t("yourLoc") : t("miami");
+  $("live").className = online ? "" : "off";
+  $("live").textContent = online ? `${t("live")} · ${updatedAt ? hhmm(updatedAt) : ""}` : t("offline");
   $("meid").textContent = `${t("reporter")}: ${reporterId}`;
   $("listen").lastElementChild.textContent = t("listen");
 }
@@ -484,6 +463,7 @@ const get = u => fetch(u).then(r => r.ok ? r.json() : Promise.reject(r.status));
 async function poll() {
   const [r, a, d, all] = await Promise.allSettled([get("/api/reports?hours=24"), get("/api/alerts/latest"), get("/api/tide"), get("/api/alerts")]);
   online = r.status === "fulfilled" || a.status === "fulfilled";
+  if (online) updatedAt = new Date();
   if (r.status === "fulfilled") {
     for (const x of r.value) if (pending[x.id] && x.status !== "analyzing") showResult(x);
     reports = r.value.filter(x => x.status !== "failed");   // failed analyses never show on the map
