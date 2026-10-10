@@ -58,7 +58,10 @@ PY
     echo "Audio device set to $DEVICE"
     ;;
   speaker-test)
-    /usr/bin/python3 /opt/hackformiami/hardware/speaker.py --test
+    AUDIO_USER="$(systemctl show -p User --value hackformiami-speaker.service)"
+    [[ -n "$AUDIO_USER" && "$AUDIO_USER" != root ]] || { echo "Reinstall hardware first to configure the desktop speaker user"; exit 1; }
+    AUDIO_UID="$(id -u "$AUDIO_USER")"
+    runuser -u "$AUDIO_USER" -- env XDG_RUNTIME_DIR="/run/user/$AUDIO_UID" PULSE_SERVER="unix:/run/user/$AUDIO_UID/pulse/native" /usr/bin/python3 /opt/hackformiami/hardware/speaker.py --test
     ;;
   speaker-start|speaker-stop)
     systemctl "${ACTION#speaker-}" hackformiami-speaker.service
