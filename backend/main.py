@@ -10,6 +10,7 @@ so the website and the speaker can be built before the AI part is ready.
 """
 import os
 import json
+import secrets
 import threading
 import time
 import urllib.error
@@ -17,10 +18,10 @@ import urllib.request
 from typing import Optional
 from pathlib import Path
 
-from fastapi import BackgroundTasks, FastAPI, File, Form, Header, HTTPException, UploadFile
+from fastapi import BackgroundTasks, Cookie, FastAPI, File, Form, Header, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse, Response, StreamingResponse
 
 try:
     from dotenv import load_dotenv
@@ -49,8 +50,14 @@ MAX_PHOTO_MB = 10
 SUPABASE_URL = os.getenv("NEXT_PUBLIC_SUPABASE_URL", "").rstrip("/")
 SUPABASE_ANON_KEY = os.getenv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "")
 CAMERA_SNAPSHOT_PATH = Path(os.getenv("CAMERA_SNAPSHOT_PATH", "/var/lib/hackformiami-hardware/latest.jpg"))
+CAMERA_STATUS_PATH = Path(os.getenv("CAMERA_STATUS_PATH", "/var/lib/hackformiami-hardware/status.json"))
+CAMERA_MAX_VIEWERS = max(1, int(os.getenv("CAMERA_MAX_VIEWERS", "3")))
+CAMERA_STREAM_TOKEN_TTL = max(15, int(os.getenv("CAMERA_STREAM_TOKEN_TTL", "60")))
 
 store = core.Store(DATA_DIR / "db.json")
+stream_lock = threading.Lock()
+stream_tokens: dict[str, float] = {}
+stream_viewers = 0
 
 
 def verified_supabase_user(authorization: str):
@@ -272,6 +279,84 @@ def camera_snapshot(authorization: str = Header(None), if_none_match: str = Head
     if if_none_match == etag:
         return Response(status_code=304, headers=headers)
     return Response(content=image.read_bytes(), media_type="image/jpeg", headers=headers)
+
+
+@app.post("/api/camera/stream-session")
+def camera_stream_session(authorization: str = Header(None)):
+    """Exchange a verified Supabase bearer token for a one-use, HttpOnly stream cookie."""
+    verified_supabase_user(authorization)
+    token = secrets.token_urlsafe(32)
+    expires = time.monotonic() + CAMERA_STREAM_TOKEN_TTL
+    with stream_lock:
+        now = time.monotonic()
+        for expired in [key for key, deadline in stream_tokens.items() if deadline <= now]:
+            stream_tokens.pop(expired, None)
+        if len(stream_tokens) >= 1000:
+            raise HTTPException(status_code=503, detail="too many pending stream sessions")
+        stream_tokens[token] = expires
+    response = Response(status_code=204)
+    response.set_cookie(
+        "camera_stream", token, max_age=CAMERA_STREAM_TOKEN_TTL,
+        httponly=True, secure=True, samesite="strict", path="/api/camera/stream",
+    )
+    return response
+
+
+def _camera_frames(target_fps: int):
+    global stream_viewers
+    boundary = b"--frame\r\nContent-Type: image/jpeg\r\nContent-Length: %d\r\n\r\n"
+    last_version = None
+    try:
+        while True:
+            try:
+                stat = CAMERA_SNAPSHOT_PATH.stat()
+                version = (stat.st_mtime_ns, stat.st_size)
+                if version != last_version and time.time() - stat.st_mtime < 10:
+                    frame = CAMERA_SNAPSHOT_PATH.read_bytes()
+                    if frame:
+                        last_version = version
+                        yield boundary % len(frame) + frame + b"\r\n"
+            except (FileNotFoundError, OSError):
+                pass
+            time.sleep(1 / target_fps)
+    finally:
+        with stream_lock:
+            stream_viewers -= 1
+
+
+@app.get("/api/camera/stream")
+def camera_stream(fps: int = 15, camera_stream: str | None = Cookie(None)):
+    """Authenticated, latest-frame-only MJPEG stream for browser image elements."""
+    global stream_viewers
+    fps = min(15, max(1, fps))
+    with stream_lock:
+        expiry = stream_tokens.pop(camera_stream or "", 0)
+        if expiry <= time.monotonic():
+            raise HTTPException(status_code=401, detail="stream authorization required")
+        if stream_viewers >= CAMERA_MAX_VIEWERS:
+            raise HTTPException(status_code=503, detail="camera viewer limit reached")
+        stream_viewers += 1
+    return StreamingResponse(
+        _camera_frames(fps), media_type="multipart/x-mixed-replace; boundary=frame",
+        headers={"Cache-Control": "no-store, no-cache, must-revalidate, no-transform",
+                 "Pragma": "no-cache", "X-Accel-Buffering": "no",
+                 "X-Stream-Target-FPS": str(fps)},
+    )
+
+
+@app.get("/api/camera/status")
+def camera_status(authorization: str = Header(None)):
+    verified_supabase_user(authorization)
+    try:
+        status = json.loads(CAMERA_STATUS_PATH.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        status = {"connected": False, "capture_fps": 0, "frames": 0, "drops": 0}
+    if time.time() - status.get("updated_at", 0) > 5:
+        status["connected"] = False
+        status["capture_fps"] = 0
+    status["viewers"] = stream_viewers
+    status["max_viewers"] = CAMERA_MAX_VIEWERS
+    return status
 
 @app.get("/api/tide")
 def tide():

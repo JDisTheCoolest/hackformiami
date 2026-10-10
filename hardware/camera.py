@@ -19,6 +19,7 @@ Camera backends tried in order (set CAPTURE=... to force one):
 Demo tip: point the camera at a laptop/phone screen showing a flooded street.
 """
 import hashlib
+import json
 import os
 import shutil
 import subprocess
@@ -31,7 +32,11 @@ import requests
 
 SERVER_URL = os.getenv("SERVER_URL", "http://localhost:8000").rstrip("/")
 INTERVAL = max(10.0, float(os.getenv("INTERVAL", "10")))          # seconds; free Gemma tier has rate limits
-PREVIEW_INTERVAL = max(0.5, float(os.getenv("PREVIEW_INTERVAL", "0.5")))
+CAMERA_FPS = min(30, max(1, int(os.getenv("CAMERA_FPS", "15"))))
+CAMERA_WIDTH = max(160, int(os.getenv("CAMERA_WIDTH", "640")))
+CAMERA_HEIGHT = max(120, int(os.getenv("CAMERA_HEIGHT", "480")))
+CAMERA_JPEG_QUALITY = min(95, max(40, int(os.getenv("CAMERA_JPEG_QUALITY", "80"))))
+PREVIEW_INTERVAL = max(0.5, float(os.getenv("PREVIEW_INTERVAL", "0.5")))  # local tracking cadence
 REPORTER_ID = os.getenv("REPORTER_ID", "pi-cam-1")
 LAT = float(os.getenv("CAM_LAT", "25.7650"))            # where the camera is mounted
 LNG = float(os.getenv("CAM_LNG", "-80.1880"))
@@ -43,6 +48,7 @@ FAILURE_LOG_INTERVAL = max(10.0, float(os.getenv("CAM_FAILURE_LOG_INTERVAL", "60
 SKIP_UNCHANGED = os.getenv("SKIP_UNCHANGED", "1") == "1"  # don't resend an identical frame
 ONCE = os.getenv("ONCE", "0") == "1"                      # take one photo and exit (testing)
 SNAPSHOT_PATH = Path(os.getenv("CAMERA_SNAPSHOT_PATH", "/var/lib/hackformiami-hardware/latest.jpg"))
+STATUS_PATH = Path(os.getenv("CAMERA_STATUS_PATH", "/var/lib/hackformiami-hardware/status.json"))
 _capture_log = {"last": 0.0, "failed": False}
 
 
@@ -199,6 +205,74 @@ def publish_snapshot(image: bytes) -> None:
     tmp.replace(target)
 
 
+def publish_status(status: dict) -> None:
+    """Atomically publish capture telemetry for the authenticated status API."""
+    STATUS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    tmp = STATUS_PATH.with_suffix(".tmp")
+    tmp.write_text(json.dumps(status), encoding="utf-8")
+    tmp.chmod(0o644)
+    tmp.replace(STATUS_PATH)
+
+
+class PersistentUSBCamera:
+    """One persistent V4L2 handle with a one-frame driver buffer and reconnect support."""
+    def __init__(self):
+        self.camera = None
+        self.device = None
+
+    def close(self) -> None:
+        if self.camera is not None:
+            self.camera.release()
+        self.camera = None
+        self.device = None
+
+    def open(self) -> bool:
+        self.close()
+        try:
+            import cv2
+            devices = video_devices()
+            if not devices:
+                raise RuntimeError("no V4L2 devices found")
+            for device in devices:
+                camera = cv2.VideoCapture(str(device), cv2.CAP_V4L2)
+                camera.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
+                camera.set(cv2.CAP_PROP_FRAME_WIDTH, CAMERA_WIDTH)
+                camera.set(cv2.CAP_PROP_FRAME_HEIGHT, CAMERA_HEIGHT)
+                camera.set(cv2.CAP_PROP_FPS, CAMERA_FPS)
+                camera.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+                if camera.isOpened():
+                    self.device = device
+                    self.camera = camera
+                    _log_capture_result(None)
+                    print("Persistent USB camera:", device, flush=True)
+                    return True
+                camera.release()
+            raise RuntimeError(f"could not open any V4L2 device: {devices}")
+        except Exception as exc:
+            _log_capture_result(f"persistent V4L2: {exc}")
+            self.close()
+            return False
+
+    def read(self) -> bytes | None:
+        if self.camera is None and not self.open():
+            return None
+        try:
+            import cv2
+            ok, frame = self.camera.read()
+            if not ok:
+                raise RuntimeError("V4L2 returned no frame")
+            ok, encoded = cv2.imencode(
+                ".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), CAMERA_JPEG_QUALITY]
+            )
+            if not ok:
+                raise RuntimeError("JPEG encoding failed")
+            return encoded.tobytes()
+        except Exception as exc:
+            _log_capture_result(f"persistent V4L2 on {self.device}: {exc}")
+            self.close()
+            return None
+
+
 def capture_frame(path: Path) -> bytes | None:
     """Capture and publish only a newly produced frame; failures return no AI input."""
     if not capture(path):
@@ -217,82 +291,97 @@ def capture_frame(path: Path) -> bytes | None:
 def main():
     from local_tracking import PersonTracker
     tracker = PersonTracker(history=20)  # most recent ~10 s at 2 FPS; RAM only
-    print(f"Camera {REPORTER_ID} at {AREA} ({LAT}, {LNG}) -> preview every {PREVIEW_INTERVAL:.0f}s; AI every {INTERVAL:.0f}s")
+    usb_stream = CAPTURE.lower() not in ("csi", "libcamera")
+    persistent = PersistentUSBCamera() if usb_stream else None
+    print(f"Camera {REPORTER_ID} at {AREA} ({LAT}, {LNG}) -> {CAMERA_WIDTH}x{CAMERA_HEIGHT} "
+          f"at up to {CAMERA_FPS} FPS; local tracking every {PREVIEW_INTERVAL:.1f}s; "
+          f"AI every {INTERVAL:.0f}s")
     last_hash = None
+    last_published_hash = None
     last_analysis = 0.0
     analysis_thread = None
+    tracking_thread = None
+    last_tracking = 0.0
     shot = Path(tempfile.gettempdir()) / "miami_alert_cam.jpg"
-    cv_cam = None
-    if CAPTURE.lower() in ("usb","v4l2","auto"):
-        try:
-            import cv2
-            for device in video_devices():
-                candidate = cv2.VideoCapture(str(device), cv2.CAP_V4L2)
-                if candidate.isOpened():
-                    candidate.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-                    candidate.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-                    candidate.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-                    cv_cam = candidate
-                    print("Persistent USB camera:",device,flush=True)
-                    break
-                candidate.release()
-        except Exception as exc:
-            print("Persistent capture unavailable:",exc,flush=True)
+    frames = drops = window_frames = 0
+    window_started = last_status = time.monotonic()
+    reconnect_after = 0.0
 
-    while True:
-        started = time.time()
-        image = None
-        if cv_cam is not None:
-            try:
-                ok, frame = cv_cam.read()
-                if ok:
-                    ok_jpg, jpg = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 75])
-                    if ok_jpg:
-                        image = jpg.tobytes()
-                        publish_snapshot(image)
+    def track(frame: bytes) -> None:
+        try:
+            observation = tracker.update(frame)
+            if observation["candidates"]:
+                print("Motion review candidates (not confirmed fighting):",
+                      observation["candidates"], flush=True)
+        except Exception as exc:
+            print("Local tracking unavailable:", str(exc)[:150], flush=True)
+
+    try:
+        while True:
+            started = time.monotonic()
+            if persistent:
+                if started < reconnect_after:
+                    image = None
                 else:
-                    cv_cam.release()
-                    cv_cam = None
-            except Exception as exc:
-                print("Persistent camera read failed:", exc, flush=True)
-                cv_cam.release()
-                cv_cam = None
-        if cv_cam is None and image is None:
-            image = capture_frame(shot)
-        if image:
-            try:
-                observation = tracker.update(image)
-                if observation["candidates"]:
-                    print("Motion review candidates (not confirmed fighting):", observation["candidates"], flush=True)
-                if int(time.monotonic()) % 10 == 0:
-                    print("Local tracking:", observation["people"], "frames in RAM:", observation["frames_in_memory"], flush=True)
-            except (ImportError, Exception) as exc:
-                print("Local tracking unavailable:", str(exc)[:150], flush=True)
-        if image:
-            due = time.monotonic() - last_analysis >= INTERVAL
-            busy = analysis_thread is not None and analysis_thread.is_alive()
-            if image and due and not busy:
-                last_analysis = time.monotonic()
-                if not ai_enabled():
-                    print("Camera AI paused; preview remains active, zero model calls", flush=True)
-                else:
-                    digest = hashlib.sha256(image).hexdigest()
-                    if SKIP_UNCHANGED and digest == last_hash:
-                        print("frame unchanged, skipped")
+                    image = persistent.read()
+                    if image is None:
+                        drops += 1
+                        reconnect_after = time.monotonic() + 2
+            else:
+                image = capture_frame(shot)  # CSI/subprocess compatibility fallback
+            if image:
+                digest = hashlib.sha256(image).hexdigest()
+                if digest != last_published_hash:
+                    publish_snapshot(image)
+                    last_published_hash = digest
+                    frames += 1
+                    window_frames += 1
+
+                now = time.monotonic()
+                tracking_busy = tracking_thread is not None and tracking_thread.is_alive()
+                if now - last_tracking >= PREVIEW_INTERVAL and not tracking_busy:
+                    last_tracking = now
+                    tracking_thread = threading.Thread(target=track, args=(image,), daemon=True)
+                    tracking_thread.start()
+
+                due = now - last_analysis >= INTERVAL
+                busy = analysis_thread is not None and analysis_thread.is_alive()
+                if due and not busy and (not SKIP_UNCHANGED or digest != last_hash):
+                    last_analysis = now
+                    if not ai_enabled():
+                        print("Camera AI paused; preview remains active, zero model calls", flush=True)
                     else:
                         last_hash = digest
+
                         def analyze(frame=image):
                             try:
                                 send(frame)
                             except requests.RequestException as exc:
                                 print("server not reachable:", exc)
+
                         analysis_thread = threading.Thread(target=analyze, daemon=True)
                         analysis_thread.start()
-        if ONCE:
-            if analysis_thread is not None:
-                analysis_thread.join()
-            break
-        time.sleep(max(0.1, PREVIEW_INTERVAL - (time.time() - started)))
+
+            now = time.monotonic()
+            if now - last_status >= 1:
+                elapsed = max(0.001, now - window_started)
+                publish_status({"connected": image is not None,
+                                "capture_fps": round(window_frames / elapsed, 1),
+                                "target_fps": CAMERA_FPS, "width": CAMERA_WIDTH,
+                                "height": CAMERA_HEIGHT, "frames": frames, "drops": drops,
+                                "updated_at": int(time.time()),
+                                "backend": "opencv-v4l2" if persistent else "csi-fallback"})
+                window_started, window_frames, last_status = now, 0, now
+            if ONCE:
+                if analysis_thread is not None:
+                    analysis_thread.join()
+                if tracking_thread is not None:
+                    tracking_thread.join()
+                break
+            time.sleep(max(0.001, (1 / CAMERA_FPS) - (time.monotonic() - started)))
+    finally:
+        if persistent:
+            persistent.close()
 
 
 if __name__ == "__main__":
