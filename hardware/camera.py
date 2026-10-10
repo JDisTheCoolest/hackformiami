@@ -24,6 +24,7 @@ import os
 import shutil
 import subprocess
 import tempfile
+import threading
 import time
 from pathlib import Path
 
@@ -31,6 +32,7 @@ import requests
 
 SERVER_URL = os.getenv("SERVER_URL", "http://localhost:8000").rstrip("/")
 INTERVAL = max(10.0, float(os.getenv("INTERVAL", "10")))          # seconds; free Gemma tier has rate limits
+PREVIEW_INTERVAL = max(1.0, float(os.getenv("PREVIEW_INTERVAL", "2")))
 REPORTER_ID = os.getenv("REPORTER_ID", "pi-cam-1")
 LAT = float(os.getenv("CAM_LAT", "25.7650"))            # where the camera is mounted
 LNG = float(os.getenv("CAM_LNG", "-80.1880"))
@@ -38,6 +40,7 @@ AREA = os.getenv("CAM_AREA", "Brickell Bay Dr")
 CAPTURE = os.getenv("CAPTURE", "auto")
 SKIP_UNCHANGED = os.getenv("SKIP_UNCHANGED", "1") == "1"  # don't resend an identical frame
 ONCE = os.getenv("ONCE", "0") == "1"                      # take one photo and exit (testing)
+SNAPSHOT_PATH = Path(os.getenv("CAMERA_SNAPSHOT_PATH", "/var/lib/hackformiami-hardware/latest.jpg"))
 
 
 def capture(path: Path) -> bool:
@@ -84,72 +87,85 @@ def ai_enabled() -> bool:
     return False
 
 
-def send(path: Path) -> None:
-    with path.open("rb") as f:
-        resp = requests.post(
-            f"{SERVER_URL}/api/reports",
-            data={"lat": LAT, "lng": LNG, "area": AREA,
-                  "source": "camera", "reporter_id": REPORTER_ID},
-            files={"photo": (path.name, f, "image/jpeg")},
-            timeout=60,
-        )
+def send(image: bytes) -> None:
+    resp = requests.post(
+        f"{SERVER_URL}/api/reports",
+        data={"lat": LAT, "lng": LNG, "area": AREA,
+              "source": "camera", "reporter_id": REPORTER_ID},
+        files={"photo": ("camera.jpg", image, "image/jpeg")},
+        timeout=60,
+    )
     if resp.status_code != 200:
         print(f"server answered {resp.status_code}: {resp.text[:200]}")
         return
     # Local, authenticated camera classification for possible physical fights.
     token = os.getenv("ADMIN_TOKEN", "")
     if token:
-        with path.open("rb") as frame:
-            try:
-                f = requests.post(f"{SERVER_URL}/api/camera/fight",
-                    files={"photo": (path.name, frame, "image/jpeg")},
-                    headers={"X-Admin-Token": token}, timeout=60)
-                if f.ok and f.json().get("announced"):
-                    print("Possible fight alert queued for speaker")
-                elif not f.ok:
-                    print("Fight classifier returned", f.status_code)
-            except requests.RequestException as exc:
-                print("Fight classifier unavailable:", exc)
+        try:
+            f = requests.post(f"{SERVER_URL}/api/camera/fight",
+                files={"photo": ("camera.jpg", image, "image/jpeg")},
+                headers={"X-Admin-Token": token}, timeout=60)
+            if f.ok and f.json().get("announced"):
+                print("Possible fight alert queued for speaker")
+            elif not f.ok:
+                print("Fight classifier returned", f.status_code)
+        except requests.RequestException as exc:
+            print("Fight classifier unavailable:", exc)
     body = resp.json()
     print("Submitted camera report:", body.get("report", {}).get("id"), "- AI analysis queued")
 
 
+def publish_snapshot(image: bytes) -> None:
+    """Atomically publish a complete frame for FastAPI readers."""
+    target = SNAPSHOT_PATH
+    target.parent.mkdir(parents=True, exist_ok=True)
+    tmp = target.with_suffix(".tmp")
+    tmp.write_bytes(image)
+    tmp.chmod(0o644)
+    tmp.replace(target)
+
+
 def main():
-    print(f"Camera {REPORTER_ID} at {AREA} ({LAT}, {LNG}) -> {SERVER_URL} every {INTERVAL:.0f}s")
+    print(f"Camera {REPORTER_ID} at {AREA} ({LAT}, {LNG}) -> preview every {PREVIEW_INTERVAL:.0f}s; AI every {INTERVAL:.0f}s")
     last_hash = None
+    last_analysis = 0.0
+    analysis_thread = None
     shot = Path(tempfile.gettempdir()) / "miami_alert_cam.jpg"
     while True:
         started = time.time()
         if capture(shot):
-            # Local snapshot is always updated; AI analysis remains opt-in.
             try:
-                target=Path("/var/lib/hackformiami-hardware/latest.jpg")
-                target.parent.mkdir(parents=True,exist_ok=True)
-                tmp=target.with_suffix(".tmp")
-                shutil.copyfile(shot,tmp)
-                tmp.chmod(0o644)
-                tmp.replace(target)
+                image = shot.read_bytes()
+                publish_snapshot(image)
             except OSError as exc:
                 print("Snapshot unavailable:",exc)
-            if not ai_enabled():
-                print("Camera AI paused; snapshot only, zero model calls",flush=True)
-                if ONCE: break
-                time.sleep(max(1.0, INTERVAL - (time.time() - started)))
-                continue
-            digest = hashlib.sha256(shot.read_bytes()).hexdigest()
-            if SKIP_UNCHANGED and digest == last_hash:
-                print("frame unchanged, skipped")
-            else:
-                last_hash = digest
-                try:
-                    send(shot)
-                except requests.RequestException as exc:
-                    print("server not reachable:", exc)
+                image = b""
+            due = time.monotonic() - last_analysis >= INTERVAL
+            busy = analysis_thread is not None and analysis_thread.is_alive()
+            if image and due and not busy:
+                last_analysis = time.monotonic()
+                if not ai_enabled():
+                    print("Camera AI paused; preview remains active, zero model calls", flush=True)
+                else:
+                    digest = hashlib.sha256(image).hexdigest()
+                    if SKIP_UNCHANGED and digest == last_hash:
+                        print("frame unchanged, skipped")
+                    else:
+                        last_hash = digest
+                        def analyze(frame=image):
+                            try:
+                                send(frame)
+                            except requests.RequestException as exc:
+                                print("server not reachable:", exc)
+                        analysis_thread = threading.Thread(target=analyze, daemon=True)
+                        analysis_thread.start()
         else:
             print("no camera found - check the cable / CAPTURE setting")
         if ONCE:
+            if analysis_thread is not None:
+                analysis_thread.join()
             break
-        time.sleep(max(1.0, INTERVAL - (time.time() - started)))
+        time.sleep(max(0.1, PREVIEW_INTERVAL - (time.time() - started)))
 
 
 if __name__ == "__main__":

@@ -9,6 +9,8 @@ if [[ ! -f /etc/hackformiami/hardware.env ]]; then
   sudo tee /etc/hackformiami/hardware.env >/dev/null <<'ENV'
 SERVER_URL=http://127.0.0.1:8000
 INTERVAL=10
+PREVIEW_INTERVAL=2
+CAMERA_SNAPSHOT_PATH=/var/lib/hackformiami-hardware/latest.jpg
 CAM_AI_ENABLED=0
 CAM_LAT=0
 CAM_LNG=0

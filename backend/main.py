@@ -49,6 +49,7 @@ ADMIN_TOKEN = os.getenv("ADMIN_TOKEN", "")                 # protects /api/reset
 MAX_PHOTO_MB = 10
 SUPABASE_URL = os.getenv("NEXT_PUBLIC_SUPABASE_URL", "").rstrip("/")
 SUPABASE_ANON_KEY = os.getenv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "")
+CAMERA_SNAPSHOT_PATH = Path(os.getenv("CAMERA_SNAPSHOT_PATH", "/var/lib/hackformiami-hardware/latest.jpg"))
 
 store = core.Store(DATA_DIR / "db.json")
 
@@ -258,14 +259,20 @@ def camera_fight(photo: UploadFile = File(...), x_admin_token: str = Header(None
 
 
 @app.get("/api/camera/snapshot")
-def camera_snapshot(authorization: str = Header(None)):
+def camera_snapshot(authorization: str = Header(None), if_none_match: str = Header(None)):
     # Never expose the local camera anonymously. Supabase verifies every request.
     verified_supabase_user(authorization)
-    image = Path("/var/lib/hackformiami-hardware/latest.jpg")
+    image = CAMERA_SNAPSHOT_PATH
     if not image.is_file():
         raise HTTPException(status_code=404, detail="camera has not captured a frame")
-    return Response(content=image.read_bytes(), media_type="image/jpeg",
-                    headers={"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"})
+    stat = image.stat()
+    etag = f'"{stat.st_mtime_ns:x}-{stat.st_size:x}"'
+    headers = {"Cache-Control": "private, no-cache", "ETag": etag,
+               "X-Camera-Captured-At": str(int(stat.st_mtime)),
+               "X-Content-Type-Options": "nosniff"}
+    if if_none_match == etag:
+        return Response(status_code=304, headers=headers)
+    return Response(content=image.read_bytes(), media_type="image/jpeg", headers=headers)
 
 @app.get("/api/tide")
 def tide():
