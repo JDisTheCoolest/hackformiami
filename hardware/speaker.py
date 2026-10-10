@@ -30,7 +30,9 @@ VOICES = {"en": "en-us", "es": "es-419", "ht": "ht"}
 SIREN_WAV = Path(__file__).with_name("siren.wav")              # optional: put a siren sound here
 TTS_VOICE = os.getenv("TTS_VOICE", "Despina")
 TTS_MODEL = os.getenv("TTS_MODEL", "gemini-2.5-flash-preview-tts")
-TTS_PROVIDER = os.getenv("TTS_PROVIDER", "gemini").lower()
+TTS_PROVIDER = os.getenv("TTS_PROVIDER", "edge").lower()
+EDGE_VOICES = {"en":"en-US-JennyNeural","es":"es-US-PalomaNeural","ht":"fr-FR-DeniseNeural"}
+EDGE_VOICE = os.getenv("EDGE_VOICE", "en-US-JennyNeural")
 RED_MINUTES = 30                                               # keep red LED on this long after an alert
 
 leds = None
@@ -98,6 +100,28 @@ def _gemini_speech(text: str) -> bytes:
     return stream.getvalue()
 
 
+def _edge_speech(text: str, lang: str) -> bytes:
+    """Natural neural TTS using an online speech service; requires internet."""
+    import tempfile
+    voice = EDGE_VOICE if lang == "en" else EDGE_VOICES.get(lang, EDGE_VOICE)
+    with tempfile.TemporaryDirectory(prefix="4forces-tts-") as folder:
+        mp3 = str(Path(folder) / "speech.mp3")
+        tool = "/opt/hackformiami/hardware/voice-venv/bin/edge-tts"
+        if not Path(tool).is_file():
+            raise RuntimeError("Natural voice not installed; run install-hardware.sh")
+        result = subprocess.run([tool, "--voice", voice, "--text", text, "--write-media", mp3],
+                                capture_output=True, timeout=25)
+        if result.returncode:
+            raise RuntimeError("Neural TTS failed: " + result.stderr.decode(errors="replace")[:160])
+        if not shutil.which("ffmpeg"):
+            raise RuntimeError("ffmpeg is needed to decode neural speech")
+        pcm = subprocess.run(["ffmpeg","-v","error","-i",mp3,"-f","wav","-"],
+                             capture_output=True, timeout=15)
+        if pcm.returncode or not pcm.stdout:
+            raise RuntimeError("Neural speech decoding failed")
+        return pcm.stdout
+
+
 def _local_speech(text: str, lang: str) -> bytes:
     if not shutil.which("espeak-ng"):
         raise RuntimeError("espeak-ng not installed")
@@ -110,13 +134,15 @@ def _local_speech(text: str, lang: str) -> bytes:
 
 def say(text: str, lang: str):
     print(f"[{lang}] {text} | TTS provider: {TTS_PROVIDER}", flush=True)
-    if TTS_PROVIDER == "gemini":
-        try:
+    try:
+        if TTS_PROVIDER == "edge":
+            wav = _edge_speech(text, lang)
+        elif TTS_PROVIDER == "gemini":
             wav = _gemini_speech(text)
-        except Exception as exc:
-            print("Gemini Despina TTS unavailable; using local fallback:", str(exc)[:200], flush=True)
+        else:
             wav = _local_speech(text, lang)
-    else:
+    except Exception as exc:
+        print("Natural speech unavailable, falling back to eSpeak:", str(exc)[:200], flush=True)
         wav = _local_speech(text, lang)
     if not shutil.which("paplay"):
         raise RuntimeError("paplay unavailable; install pulseaudio-utils")
