@@ -6,7 +6,7 @@ import { AuthLayout, buttonClass, fieldClass } from "@/components/auth/AuthLayou
 import { Wordmark } from "@/components/brand/Wordmark";
 import { useAuth } from "@/lib/auth";
 import { API_BASE } from "@/lib/config";
-import { safeRedirectPath, supabase } from "@/lib/supabase";
+import { isSupabaseConfigured, safeRedirectPath, supabase } from "@/lib/supabase";
 
 function AuthLoader() {
   return <main className="grid min-h-dvh place-items-center bg-abyss text-cyan"><LoaderCircle className="size-7 animate-spin" aria-label="Loading session" /></main>;
@@ -74,6 +74,7 @@ export function LoginPage() {
 
   async function submit(event: FormEvent) {
     event.preventDefault();
+    if (!isSupabaseConfigured) { setError("Sign-in is temporarily unavailable while authentication is being configured."); return; }
     setError("");
     setLoading(true);
     const { error: authError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
@@ -84,7 +85,7 @@ export function LoginPage() {
 
   return <AuthLayout eyebrow="Welcome back" title="Sign in" description="Access Miami’s live force map and community reporting tools." footer={<>New to 4forces? <Link className="font-medium text-cyan hover:text-foam" to="/signup">Create an account</Link></>}>
     <form onSubmit={submit} className="space-y-5">
-      <ErrorMessage message={error} />
+      <ErrorMessage message={!isSupabaseConfigured ? "Authentication setup is pending. The public 4forces website remains available." : error} />
       <label className="block"><span className="mb-2 block text-sm font-medium text-foam">Email</span><input className={fieldClass} type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" /></label>
       <label className="block"><span className="mb-2 block text-sm font-medium text-foam">Password</span><span className="relative block"><input className={`${fieldClass} pr-12`} type={showPassword ? "text" : "password"} autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} /><button type="button" onClick={() => setShowPassword((value) => !value)} className="absolute inset-y-0 right-0 grid w-12 place-items-center text-mist hover:text-foam" aria-label={showPassword ? "Hide password" : "Show password"}>{showPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}</button></span></label>
       <button className={buttonClass} disabled={loading}>{loading && <LoaderCircle className="size-4 animate-spin" />} {loading ? "Signing in…" : "Sign in"}</button>
