@@ -21,7 +21,7 @@ Spanish and Haitian Creole. A live map shows reports; a banner shows NOAA tide r
 ## Stack and contract
 - backend: FastAPI (main.py), pure-stdlib logic in core.py, JSON file storage in backend/data/
 - AI: Gemma 4 via Gemini API, `google-genai` SDK, model from env GEMMA_MODEL
-  (gemma-4-31b-it; fallback gemma-4-26b-a4b-it if slow or rate-limited). Free tier.
+  (gemma-4-26b-a4b-it default, retried once, then gemma-4-31b-it). Free tier.
 - No GEMINI_API_KEY -> MOCK mode (fake analysis) so web and speaker work without AI.
 - API contract: backend/API.md — keep it in sync when endpoints change.
 - Server also serves ../website at / and ../app at /app (one URL for judges).

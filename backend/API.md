@@ -17,7 +17,7 @@ Interactive docs: `/docs`. All responses are JSON.
 Voice: turn speech into text in the browser (Web Speech API) and send it as `text`.
 
 Returns **immediately** (~10 ms) with `status: "analyzing"` and `analysis: null`. Gemma runs in the
-background (usually 2-20 s, up to ~60 s if the first model is slow). Poll `GET /api/reports` until the
+background (usually 2-20 s, up to ~60 s if the first model is slow). If the server restarts mid-analysis, it re-runs those reports on startup. Poll `GET /api/reports` until the
 report's `status` is `done` or `failed`. The alert check runs after the analysis, so the top-level
 `alert` is always `null` here; read alerts from `/api/alerts/latest`.
 
@@ -42,7 +42,7 @@ Response (shown after analysis finished; right after POST `status` is `"analyzin
       "hazards": ["floating debris"],
       "reference_object": "tire",
       "confidence": 0.9,
-      "model": "gemma-4-31b-it",
+      "model": "gemma-4-26b-a4b-it",
       "needs_confirmation": false,
       "reasoning": "Water covers the wheel rims.",
       "summary": { "en": "...", "es": "...", "ht": "..." }
@@ -58,8 +58,8 @@ Response (shown after analysis finished; right after POST `status` is `"analyzin
 - `needs_confirmation: true` → show "Unconfirmed" badge (confidence below 0.6)
 - `status`: `analyzing` (show a gray "analyzing..." pin) | `done` (colored pin) | `failed` (AI failed after
   all retries; `analysis` is `null`, `error` has the reason; show "try again"). `analysis` is `null` unless `done`.
-- `analysis.model`: which model answered. Order: `GEMMA_MODEL` twice, then `FALLBACK_MODEL`
-  (`gemma-4-26b-a4b-it`), then optional non-Gemma `FLASH_MODEL` (empty by default = Gemma 4 only).
+- `analysis.model`: which model answered. Order: `GEMMA_MODEL` (`gemma-4-26b-a4b-it`) twice, then `FALLBACK_MODEL`
+  (`gemma-4-31b-it`), then optional non-Gemma `FLASH_MODEL` (empty by default = Gemma 4 only).
   Photos are shrunk to max 1024 px before sending; thinking is set to `minimal`; each attempt times out after `MODEL_TIMEOUT_S` (20).
 - `photo_url` can be `null` for text-only reports
 - Errors: `400` (no photo and no text, not an image), `413` (photo > 10 MB). AI failures no longer return 502: the report gets `status: "failed"`.
@@ -112,4 +112,4 @@ Change with env vars `ALERT_THRESHOLD`, `ALERT_RADIUS_M`, `ALERT_WINDOW_MIN`, `M
 - `POST /api/alerts/test?type=flood&area=Wynwood` — fire a test alert (speaker backup)
 - `POST /api/reset` — clear all reports and alerts before the demo
 
-## GET /api/health — `{ "ok": true, "mock": false, "model": "gemma-4-31b-it", ... }`
+## GET /api/health — `{ "ok": true, "mock": false, "model": "gemma-4-26b-a4b-it", ... }`

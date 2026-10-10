@@ -11,6 +11,7 @@ so the website and the speaker can be built before the AI part is ready.
 import io
 import logging
 import os
+import threading
 import time
 from typing import Optional
 from pathlib import Path
@@ -35,14 +36,14 @@ APP_DIR = BASE_DIR.parent / "app"          # web app (photo/text reports, map) -
 PHOTO_DIR.mkdir(parents=True, exist_ok=True)
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-GEMMA_MODEL = os.getenv("GEMMA_MODEL", "gemma-4-31b-it")   # or gemma-4-26b-a4b-it (faster)
+GEMMA_MODEL = os.getenv("GEMMA_MODEL", "gemma-4-26b-a4b-it")   # fast, ~5 s; 31b is the slower fallback
 ALERT_THRESHOLD = int(os.getenv("ALERT_THRESHOLD", "3"))   # reports needed to trigger an alert
 ALERT_RADIUS_M = float(os.getenv("ALERT_RADIUS_M", "1000"))
 ALERT_WINDOW_MIN = int(os.getenv("ALERT_WINDOW_MIN", "60"))
 MIN_CONFIDENCE = float(os.getenv("MIN_CONFIDENCE", "0.5"))
 NOAA_STATION = os.getenv("NOAA_STATION", "8723214")
 ADMIN_TOKEN = os.getenv("ADMIN_TOKEN", "")                 # protects /api/reset and /api/alerts/test
-FALLBACK_MODEL = os.getenv("FALLBACK_MODEL", "gemma-4-26b-a4b-it")
+FALLBACK_MODEL = os.getenv("FALLBACK_MODEL", "gemma-4-31b-it")
 FLASH_MODEL = os.getenv("FLASH_MODEL", "")   # optional non-Gemma last resort, e.g. gemini-3.5-flash-lite; off = Gemma 4 only
 MODEL_TIMEOUT_S = int(os.getenv("MODEL_TIMEOUT_S", "20"))          # per attempt; gemma-4-31b can hang
 MAX_IMAGE_PX = 1024
@@ -128,7 +129,27 @@ def check_admin(token):
         raise HTTPException(status_code=401, detail="bad admin token")
 
 
+def resume_analyzing():
+    """After a restart, re-run analysis for reports left in status "analyzing" (no gray pins stuck)."""
+    mimes = {".png": "image/png", ".webp": "image/webp", ".heic": "image/heic"}
+    for r in [r for r in store.data["reports"] if r.get("status") == "analyzing"]:
+        img, mime = None, "image/jpeg"
+        if r.get("photo_url"):
+            p = PHOTO_DIR / Path(r["photo_url"]).name
+            if p.exists():
+                img, mime = p.read_bytes(), mimes.get(p.suffix, "image/jpeg")
+        if img is None and not r.get("text"):
+            store.update(r, status="failed", error="photo lost before analysis")
+            continue
+        process_report(r["id"], img, mime, r.get("text", ""))
+
+
 app = FastAPI(title="Miami Alert Hub API")
+
+
+@app.on_event("startup")
+def _resume():
+    threading.Thread(target=resume_analyzing, daemon=True).start()
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
