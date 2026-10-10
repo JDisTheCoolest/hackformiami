@@ -314,7 +314,7 @@ def main():
             payload = {"updated_at": time.time(), "people": observation["people"],
                        "candidates": observation["candidates"],
                        "frames_in_memory": observation["frames_in_memory"],
-                       "tracking_mode": "anonymous_session_ids",
+                       "tracking_mode": "mobilenet_ssd_person_only_v2",
                        "fight_confirmed": False}
             dest = Path("/var/lib/hackformiami-hardware/tracking.json")
             temp = dest.with_suffix(".tmp")
@@ -325,6 +325,11 @@ def main():
                       observation["candidates"], flush=True)
         except Exception as exc:
             print("Local tracking unavailable:", str(exc)[:150], flush=True)
+            dest = Path("/var/lib/hackformiami-hardware/tracking.json")
+            temp = dest.with_suffix(".tmp")
+            temp.write_text(json.dumps({"updated_at":time.time(),"people":[],"candidates":[],
+                  "tracking_mode":"unavailable","error":str(exc)[:160]}))
+            temp.replace(dest)
 
     try:
         while True:
