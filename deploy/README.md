@@ -43,7 +43,7 @@ cd /opt/hackformiami && git pull --ff-only && bash deploy/install-manager.sh
 ```
 Then open **HackForMiami Manager → Website & AI → Install / update website and API** (requires desktop Polkit authentication). Or run `sudo bash deploy/install-site.sh` from a Pi terminal. This installs runtime dependencies, builds the website, creates `hackformiami-site.service`, and serves website/API on local-only port 8000.
 
-For live AI, edit local-only `/etc/hackformiami/backend.env` using `sudoedit` and set `GEMINI_API_KEY`; then restart `hackformiami-site`. The file is created with root-only access, includes a randomly generated ADMIN_TOKEN, and must never be committed. Without the key the backend intentionally returns **mock/sample** AI output. Check `curl -fsS http://127.0.0.1:8000/api/health`.
+For live gamma AI, edit local-only `/etc/hackformiami/backend.env` using `sudoedit` and set `GEMINI_API_KEY`; then restart `hackformiami-site`. The file is created with root-only access, includes a randomly generated ADMIN_TOKEN, and must never be committed. Without the key the backend intentionally returns **mock/sample** AI output. Check `curl -fsS http://127.0.0.1:8000/api/health`.
 
 The update timer only fetches and reports availability. An approved Manager deployment fast-forwards, runs `npm ci`, builds the Vite app, installs backend requirements into the existing virtual environment, restarts the site service, and verifies `/api/health`. Logs are retained at `/var/lib/hackformiami-update/deploy.log`.
 
