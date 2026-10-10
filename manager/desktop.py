@@ -7,6 +7,9 @@ import sys
 import tkinter as tk
 from pathlib import Path
 from tkinter import ttk, messagebox
+import re
+import threading
+import webbrowser
 
 ROOT = Path("/opt/hackformiami")
 SOURCE = ROOT / "manager" / "desktop.py"
@@ -100,17 +103,68 @@ class Manager(tk.Tk):
             self.render_data(keys=["Branch","Commit","Git changes","Update timer","Last update"])
             tk.Label(self.content,text="GitHub main is fast-forwarded when clean; no forced overwrite of local edits.",bg=BG,fg=MUTED,wraplength=650).pack(anchor="w")
         elif name == "Cloudflare":
-            self.heading("Cloudflare Tunnel","Public application routing, separate from this private desktop manager")
-            self.data = tk.Frame(self.content,bg=BG)
-            self.data.pack(fill="both",expand=True)
-            self.render_data(keys=["Cloudflare","Host"])
-            tk.Label(self.content,text="The native manager is not exposed through Cloudflare. Use Pi Connect to reach this desktop. Configure a separate tunnel route for the future public website.",bg=BG,fg=MUTED,wraplength=660,justify="left").pack(anchor="w")
+            self.cloudflare_screen()
         else:
             self.heading(name, "Organizer workspace")
             panel=tk.Frame(self.content,bg=PANEL,padx=28,pady=28)
             panel.pack(fill="x")
             tk.Label(panel,text=name+" is ready for future integration.",bg=PANEL,fg=FG,font=("DejaVu Sans",15,"bold")).pack(anchor="w")
             tk.Label(panel,text="This manager does not invent a backend or modify the HackForMiami website. This section will connect when the corresponding application module exists.",bg=PANEL,fg=MUTED,wraplength=600,justify="left").pack(anchor="w",pady=(12,0))
+
+    def cloudflare_screen(self):
+        self.heading("Cloudflare Tunnel", "Connect your public HackForMiami site to a Cloudflare-managed hostname")
+        self.cf_status = tk.StringVar(value="Checking connector...")
+        self.cf_result = tk.StringVar(value="Cloudflare Tunnel credentials stay on this Pi, never in GitHub.")
+        self.cf_token = tk.StringVar()
+        self.cf_port = tk.StringVar(value="8000")
+        frame=tk.Frame(self.content,bg=PANEL,padx=22,pady=19)
+        frame.pack(fill="both",expand=True)
+        def label(text):
+            tk.Label(frame,text=text,bg=PANEL,fg=FG,font=("DejaVu Sans",11,"bold"),anchor="w").pack(anchor="w",pady=(12,5))
+        label("1. Create a remotely managed tunnel")
+        tk.Label(frame,text="Open Zero Trust → Networks → Tunnels → Create tunnel. Choose Cloudflared, then copy the connector token (not the entire shell command).",bg=PANEL,fg=MUTED,wraplength=620,justify="left").pack(anchor="w")
+        tk.Button(frame,text="Open Cloudflare Zero Trust ↗",command=lambda:webbrowser.open("https://one.dash.cloudflare.com/"),bg="#176657",fg=FG,relief="flat",padx=13,pady=9).pack(anchor="w",pady=8)
+        label("2. Install connector on this Pi")
+        tk.Label(frame,textvariable=self.cf_status,bg=PANEL,fg=ACCENT).pack(anchor="w")
+        tk.Label(frame,text="Paste only the tunnel token (usually a long eyJ... value). The GUI will request your system authorization and start cloudflared.",bg=PANEL,fg=MUTED,wraplength=620,justify="left").pack(anchor="w")
+        ent=tk.Entry(frame,textvariable=self.cf_token,show="•",width=60,bg=PANEL2,fg=FG,insertbackground=FG,relief="flat",font=("DejaVu Sans",11))
+        ent.pack(anchor="w",fill="x",pady=8,ipady=8)
+        tk.Button(frame,text="Install / connect tunnel",command=self.install_tunnel,bg="#176657",fg=FG,relief="flat",padx=13,pady=10).pack(anchor="w")
+        label("3. Route the public website")
+        tk.Label(frame,text="In Cloudflare's tunnel settings, add a published application route. Use HTTPS hostname you control; service Type HTTP, URL http://127.0.0.1:8000. The local backend/site service must also be started separately.",bg=PANEL,fg=MUTED,wraplength=620,justify="left").pack(anchor="w")
+        tk.Label(frame,text="Do NOT route this desktop manager through the tunnel. Keep it accessible through Pi Connect.",bg=PANEL,fg="#f2c789",wraplength=620,justify="left").pack(anchor="w",pady=8)
+        tk.Button(frame,text="Check connection",command=self.check_tunnel,bg=PANEL2,fg=FG,relief="flat",padx=13,pady=9).pack(anchor="w",pady=5)
+        tk.Label(frame,textvariable=self.cf_result,bg=PANEL,fg=MUTED,wraplength=620,justify="left").pack(anchor="w",pady=8)
+        self.check_tunnel()
+
+    def check_tunnel(self):
+        def work():
+            installed=shutil.which("cloudflared") is not None
+            service=cmd("systemctl","is-active","cloudflared")
+            local=cmd("curl","-fsS","-o","/dev/null","-w","%{http_code}","--max-time","3","http://127.0.0.1:8000/api/health")
+            def paint():
+                if not self.selected.get()=="Cloudflare":return
+                self.cf_status.set(f"cloudflared: {'installed' if installed else 'missing'} | service: {service}")
+                self.cf_result.set(f"Local website/backend at port 8000: HTTP {local}. Check your Cloudflare hostname externally after routing.")
+            self.after(0,paint)
+        threading.Thread(target=work,daemon=True).start()
+
+    def install_tunnel(self):
+        token=self.cf_token.get().strip()
+        if not re.fullmatch(r"[A-Za-z0-9_\\-.=]{50,4096}",token):
+            messagebox.showerror("Invalid token","Paste only the Cloudflare tunnel connector token, not a command or URL.")
+            return
+        if not messagebox.askyesno("Install Cloudflare Tunnel","Authorize installation of this Cloudflare connector as a system service on this Pi?"):
+            return
+        self.cf_token.set("")
+        self.cf_result.set("Requesting system authentication...")
+        def work():
+            try:
+                p=subprocess.run(["pkexec","/usr/local/sbin/hackformiami-cloudflared-install"],input=token+"\\n",text=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=180)
+                msg="Tunnel connector installed successfully." if p.returncode==0 else "Install failed: "+(p.stderr or p.stdout)[-400:]
+            except (OSError, subprocess.TimeoutExpired) as ex:msg="Installer unavailable: "+str(ex)
+            self.after(0,lambda: (self.cf_result.set(msg),self.check_tunnel()))
+        threading.Thread(target=work,daemon=True).start()
 
     def render_data(self, keys=None):
         if not hasattr(self,"data") or not self.data.winfo_exists(): return
