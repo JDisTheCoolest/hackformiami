@@ -8,11 +8,8 @@ Docs:          http://localhost:8000/docs
 Without GEMINI_API_KEY the server runs in MOCK mode (fake AI results),
 so the website and the speaker can be built before the AI part is ready.
 """
-import io
-import logging
 import os
 import threading
-import time
 from typing import Optional
 from pathlib import Path
 
@@ -27,6 +24,7 @@ except ImportError:
     pass
 
 import core
+from ai import GEMMA_MODEL, MOCK, analyze_report
 
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
@@ -35,78 +33,15 @@ SITE_DIR = BASE_DIR.parent / "website"     # landing page (Magzhan) -> served at
 APP_DIR = BASE_DIR.parent / "app"          # web app (photo/text reports, map) -> served at /app
 PHOTO_DIR.mkdir(parents=True, exist_ok=True)
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-GEMMA_MODEL = os.getenv("GEMMA_MODEL", "gemma-4-26b-a4b-it")   # fast, ~5 s; 31b is the slower fallback
 ALERT_THRESHOLD = int(os.getenv("ALERT_THRESHOLD", "3"))   # reports needed to trigger an alert
 ALERT_RADIUS_M = float(os.getenv("ALERT_RADIUS_M", "1000"))
 ALERT_WINDOW_MIN = int(os.getenv("ALERT_WINDOW_MIN", "60"))
 MIN_CONFIDENCE = float(os.getenv("MIN_CONFIDENCE", "0.5"))
 NOAA_STATION = os.getenv("NOAA_STATION", "8723214")
 ADMIN_TOKEN = os.getenv("ADMIN_TOKEN", "")                 # protects /api/reset and /api/alerts/test
-FALLBACK_MODEL = os.getenv("FALLBACK_MODEL", "gemma-4-31b-it")
-FLASH_MODEL = os.getenv("FLASH_MODEL", "")   # optional non-Gemma last resort, e.g. gemini-3.5-flash-lite; off = Gemma 4 only
-MODEL_TIMEOUT_S = int(os.getenv("MODEL_TIMEOUT_S", "20"))          # per attempt; gemma-4-31b can hang
-MAX_IMAGE_PX = 1024
 MAX_PHOTO_MB = 10
-MOCK = not GEMINI_API_KEY
 
 store = core.Store(DATA_DIR / "db.json")
-
-_client = None
-if not MOCK:
-    from google import genai
-    from google.genai import types
-    _client = genai.Client(api_key=GEMINI_API_KEY)
-
-
-log = logging.getLogger("uvicorn.error")
-
-
-def shrink(img: bytes, mime: str):
-    """Downscale to max 1024px JPEG: less to upload, faster for the model."""
-    try:
-        from PIL import Image, ImageOps
-        im = ImageOps.exif_transpose(Image.open(io.BytesIO(img)))
-        im.thumbnail((MAX_IMAGE_PX, MAX_IMAGE_PX))
-        out = io.BytesIO()
-        im.convert("RGB").save(out, "JPEG", quality=85)
-        return out.getvalue(), "image/jpeg"
-    except Exception:  # e.g. HEIC without a decoder: send the original
-        return img, mime
-
-
-def call_model(model: str, parts: list) -> dict:
-    # Gemma 4 only accepts thinkingLevel "minimal"; the SDK has no field for it, so use extra_body.
-    extra = {"generationConfig": {"thinkingConfig": {"thinkingLevel": "minimal"}}} if model.startswith("gemma") else None
-    cfg = types.GenerateContentConfig(
-        temperature=0.2,
-        http_options=types.HttpOptions(timeout=MODEL_TIMEOUT_S * 1000, extra_body=extra))
-    resp = _client.models.generate_content(model=model, contents=parts, config=cfg)
-    return core.parse_model_json(resp.text)
-
-
-def analyze_report(img: Optional[bytes], mime: str, text: str) -> dict:
-    """Photo, text, or both -> Gemma 4 (retry, then fallbacks) -> normalized analysis."""
-    has_photo = img is not None
-    if MOCK:
-        return core.mock_analysis(len(store.data["reports"]))
-    parts = []
-    if has_photo:
-        img, mime = shrink(img, mime)
-        parts.append(types.Part.from_bytes(data=img, mime_type=mime))
-    parts.append(core.build_prompt(text, has_photo))
-    last = None
-    for model in filter(None, (GEMMA_MODEL, GEMMA_MODEL, FALLBACK_MODEL, FLASH_MODEL)):
-        t0 = time.time()
-        try:
-            analysis = core.normalize_analysis(call_model(model, parts), has_photo)
-            analysis["model"] = model
-            log.info("analysis ok model=%s %.1fs", model, time.time() - t0)
-            return analysis
-        except Exception as exc:
-            last = exc
-            log.warning("analysis failed model=%s %.1fs: %s", model, time.time() - t0, str(exc)[:120])
-    raise last
 
 
 def process_report(rid: str, img: Optional[bytes], mime: str, text: str):

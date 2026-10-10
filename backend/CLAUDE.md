@@ -12,14 +12,16 @@ Raspberry Pi speakers poll the backend and announce the alert out loud in Englis
 Spanish and Haitian Creole. A live map shows reports; a banner shows NOAA tide risk
 (today is the October king tide peak in Miami).
 
-## Ownership — only edit backend/ and app/
-- Sanzhar: backend/ and app/ (the web app)
+## Ownership (split so two people never edit the same file)
+- Sanzhar: app/ (the web app) and backend/ai.py (ALL AI: prompt, Gemma client, resize, retries, mock)
+- JD: the rest of backend/ (main.py, core.py: API, storage, alerts, tide) and hardware/ (Pi speaker)
 - Magzhan: website/ (landing page, served at /)
-- JD: hardware (Pi speaker), deploy/, manager/ — do not touch deploy/ or manager/
-- Root README.md and LICENSE belong to the team; ask before changing them.
+- deploy/ and manager/ belong to JD. Root README.md and LICENSE belong to the team; ask before changing them.
+- Interface between the two sides: `ai.analyze_report(img, mime, text) -> dict` and backend/API.md.
+  Changing the shape of the analysis dict or any endpoint means updating API.md and telling the other person.
 
 ## Stack and contract
-- backend: FastAPI (main.py), pure-stdlib logic in core.py, JSON file storage in backend/data/
+- backend: FastAPI (main.py), pure-stdlib logic in core.py, all AI in ai.py, JSON file storage in backend/data/
 - AI: Gemma 4 via Gemini API, `google-genai` SDK, model from env GEMMA_MODEL
   (gemma-4-26b-a4b-it default, retried once, then gemma-4-31b-it). Free tier.
 - No GEMINI_API_KEY -> MOCK mode (fake analysis) so web and speaker work without AI.
