@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 set -euo pipefail
-flag=/var/lib/hackformiami-update/restart-required
-if [[ -f "$flag" ]]; then
-  systemctl restart hackformiami-manager.service
-  rm -f "$flag"
-fi
+# Native GUI checks desktop.py for changes itself and reloads in the user's session.
+# No system-wide web manager restart is needed.
+rm -f /var/lib/hackformiami-update/restart-required
