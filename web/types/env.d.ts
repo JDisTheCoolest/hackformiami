@@ -1,8 +1,8 @@
 /// <reference types="vite/client" />
 
 interface ImportMetaEnv {
-  /** Destination of every "Go to the App" CTA. See .env.example. */
-  readonly VITE_APP_URL?: string;
+  readonly NEXT_PUBLIC_SUPABASE_URL: string;
+  readonly NEXT_PUBLIC_SUPABASE_ANON_KEY: string;
   /** Base URL of the 4forces backend API. Empty = same origin. */
   readonly VITE_API_BASE?: string;
   /** Optional CARTO basemaps key (Dark Matter tiles). Without it the map uses Esri's keyless dark basemap. */

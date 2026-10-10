@@ -21,22 +21,14 @@ Node 20+ (tested with Node 24 on Apple Silicon / darwin-arm64).
 
 | Variable | Used for | Default |
 |---|---|---|
-| `VITE_APP_URL` | Every **Go to the App** CTA (hero, nav, assistant, app section, hardware, final CTA, footer) via `components/ui/app-link.tsx` → `lib/config.ts` | `/app/` (backend/main.py serves `app/` at `/app`) |
 | `VITE_API_BASE` | Base URL for the read-only API calls | empty = same origin |
 | `DEV_API_PROXY` | Dev-server proxy target for `/api` | `http://localhost:8000` |
 
-Put overrides in **`.env.local` at the repository root** (`vite.config.ts` sets `envDir` to the root; `web/` has no env files of its own).
-Without one, `npm run dev` links the app to `http://localhost:8000/app/` and builds link to `/app/`. See `web/.env.example`.
+Put overrides in **`.env.local` at the repository root** (`vite.config.ts` sets `envDir` to the root). Every **Go to the App** CTA uses the same-origin protected `/app/` route through `components/ui/app-link.tsx`.
 
-> **Heads-up:** `app/` currently contains only a README (no `index.html` yet), so `/app/` will 404 until the app lands.
+## Deployment note
 
-## Deployment note (needs a team decision)
-
-`backend/main.py` serves the folder `../website` at `/`. This project lives in `web/` and builds to `web/dist/`,
-so the backend does **not** serve it yet. Options (owner of `backend/` decides):
-
-1. Point `SITE_DIR` in `backend/main.py` at `web/dist`, and run `npm run build` on deploy; or
-2. Copy `web/dist/*` into `website/` as a deploy step.
+`backend/main.py` serves the production build from `web/dist/`. Run `npm run build` before starting the backend.
 
 The build output is plain static HTML/CSS/JS, so the Pi needs no Node runtime if the build is done elsewhere.
 

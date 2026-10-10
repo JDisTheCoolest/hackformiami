@@ -12,7 +12,7 @@ import { Nav } from "@/components/sections/Nav";
 import { SignalChain } from "@/components/sections/SignalChain";
 import { LiveDataProvider } from "@/lib/live-data";
 
-export function App() {
+export function MarketingHome() {
   return (
     <LiveDataProvider>
       <Nav />

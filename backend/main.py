@@ -9,16 +9,21 @@ Without GEMINI_API_KEY the server runs in MOCK mode (fake AI results),
 so the website and the speaker can be built before the AI part is ready.
 """
 import os
+import json
 import threading
+import urllib.error
+import urllib.request
 from typing import Optional
 from pathlib import Path
 
 from fastapi import BackgroundTasks, FastAPI, File, Form, Header, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 try:
     from dotenv import load_dotenv
+    load_dotenv(Path(__file__).resolve().parent.parent / ".env.local")
     load_dotenv()
 except ImportError:
     pass
@@ -40,8 +45,31 @@ MIN_CONFIDENCE = float(os.getenv("MIN_CONFIDENCE", "0.5"))
 NOAA_STATION = os.getenv("NOAA_STATION", "8723214")
 ADMIN_TOKEN = os.getenv("ADMIN_TOKEN", "")                 # protects /api/reset and /api/alerts/test
 MAX_PHOTO_MB = 10
+SUPABASE_URL = os.getenv("NEXT_PUBLIC_SUPABASE_URL", "").rstrip("/")
+SUPABASE_ANON_KEY = os.getenv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "")
 
 store = core.Store(DATA_DIR / "db.json")
+
+
+def verified_supabase_user(authorization: str):
+    """Validate a bearer token with Supabase Auth; never trust client session state alone."""
+    scheme, _, token = (authorization or "").partition(" ")
+    if scheme.lower() != "bearer" or not token:
+        raise HTTPException(status_code=401, detail="missing bearer token")
+    if not SUPABASE_URL or not SUPABASE_ANON_KEY:
+        raise HTTPException(status_code=503, detail="authentication is not configured")
+    request = urllib.request.Request(
+        f"{SUPABASE_URL}/auth/v1/user",
+        headers={"apikey": SUPABASE_ANON_KEY, "Authorization": f"Bearer {token}"},
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=8) as response:
+            user = json.loads(response.read())
+    except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, ValueError):
+        raise HTTPException(status_code=401, detail="invalid or expired session") from None
+    if not user.get("id"):
+        raise HTTPException(status_code=401, detail="invalid session")
+    return user
 
 
 def process_report(rid: str, img: Optional[bytes], mime: str, text: str):
@@ -93,6 +121,12 @@ def health():
     return {"ok": True, "mock": MOCK, "model": GEMMA_MODEL,
             "alert_threshold": ALERT_THRESHOLD, "alert_radius_m": ALERT_RADIUS_M,
             "alert_window_min": ALERT_WINDOW_MIN}
+
+
+@app.get("/api/auth/me")
+def authenticated_user(authorization: str = Header(None)):
+    user = verified_supabase_user(authorization)
+    return {"id": user["id"], "email": user.get("email")}
 
 
 @app.post("/api/reports")
@@ -168,7 +202,23 @@ def reset(x_admin_token: str = Header(None)):
 
 
 app.mount("/photos", StaticFiles(directory=PHOTO_DIR), name="photos")
-if APP_DIR.exists():
+if (APP_DIR / "index.html").exists():
     app.mount("/app", StaticFiles(directory=APP_DIR, html=True), name="app")
+elif (SITE_DIR / "index.html").exists():
+    @app.get("/app/{path:path}", include_in_schema=False)
+    def app_spa(path: str):
+        return FileResponse(SITE_DIR / "index.html")
+
+if (SITE_DIR / "index.html").exists():
+    @app.get("/login", include_in_schema=False)
+    @app.get("/signup", include_in_schema=False)
+    @app.get("/auth/confirm", include_in_schema=False)
+    @app.get("/account", include_in_schema=False)
+    @app.get("/reports", include_in_schema=False)
+    @app.get("/reports/new", include_in_schema=False)
+    @app.get("/alerts", include_in_schema=False)
+    @app.get("/settings", include_in_schema=False)
+    def auth_spa():
+        return FileResponse(SITE_DIR / "index.html")
 if SITE_DIR.exists():  # must stay last: serves the landing page for "/"
     app.mount("/", StaticFiles(directory=SITE_DIR, html=True), name="website")

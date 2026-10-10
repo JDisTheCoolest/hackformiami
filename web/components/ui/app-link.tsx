@@ -13,7 +13,7 @@ interface AppLinkProps {
 
 /**
  * Every "Go to the App" CTA on the site renders through this component so they share
- * one destination (APP_URL from lib/config.ts / VITE_APP_URL).
+ * one same-origin destination (APP_URL from lib/config.ts).
  */
 export function AppLink({ variant = "primary", className, children = "Go to the App", context }: AppLinkProps) {
   return (

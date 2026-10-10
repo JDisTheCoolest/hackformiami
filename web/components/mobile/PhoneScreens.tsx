@@ -144,11 +144,12 @@ function TabBar({ active }: { active: "home" | "map" | "alerts" | "me" }) {
 
 export function OverviewScreen() {
   const { tide, latestAlert, reports } = useLiveData();
-  const t = tide.status === "ok" ? tide.data : SAMPLE_TIDE;
+  // A failed/incomplete backend response must never blank the public landing page.
+  const t = tide.status === "ok" && tide.data?.station ? tide.data : SAMPLE_TIDE;
   const liveAlert = latestAlert.status === "ok";
   const alert = liveAlert ? latestAlert.data : SAMPLE_ALERT;
-  const live = tide.status === "ok";
-  const reportCount = reports.status === "ok" ? reports.data.length : SAMPLE_POINTS.length;
+  const live = tide.status === "ok" && Boolean(tide.data);
+  const reportCount = reports.status === "ok" && reports.data ? reports.data.length : SAMPLE_POINTS.length;
 
   return (
     <div className="flex h-full flex-col bg-[radial-gradient(120%_50%_at_50%_0%,#0d2a6b_0%,#06152f_45%,#030814_80%)]">
