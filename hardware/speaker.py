@@ -12,6 +12,9 @@ Setup on the Pi:
 Check voices:  espeak-ng --voices | grep -E " (en|es|ht)"
 """
 import os
+import base64
+import io
+import wave
 import shutil
 import subprocess
 import time
@@ -25,6 +28,9 @@ POLL_SECONDS = float(os.getenv("POLL_SECONDS", "5"))
 LANGS = os.getenv("SPEAK_LANGS", "en,es,ht").split(",")      # drop "ht" if espeak has no Creole voice
 VOICES = {"en": "en-us", "es": "es-419", "ht": "ht"}
 SIREN_WAV = Path(__file__).with_name("siren.wav")              # optional: put a siren sound here
+TTS_VOICE = os.getenv("TTS_VOICE", "Despina")
+TTS_MODEL = os.getenv("TTS_MODEL", "gemini-2.5-flash-preview-tts")
+TTS_PROVIDER = os.getenv("TTS_PROVIDER", "gemini").lower()
 RED_MINUTES = 30                                               # keep red LED on this long after an alert
 
 leds = None
@@ -62,20 +68,61 @@ def siren():
         say("Alert! Alert!", "en")
 
 
-def say(text: str, lang: str):
-    print(f"[{lang}] {text}", flush=True)
+def _gemini_speech(text: str) -> bytes:
+    """Render Gemini Despina's mono 24 kHz PCM response into a WAV."""
+    key = os.getenv("GEMINI_API_KEY", "")
+    if not key:
+        raise RuntimeError("GEMINI_API_KEY missing for Gemini TTS")
+    url = "https://generativelanguage.googleapis.com/v1beta/models/" + TTS_MODEL + ":generateContent"
+    payload = {
+        "contents": [{"parts": [{"text": text}]}],
+        "generationConfig": {
+            "responseModalities": ["AUDIO"],
+            "speechConfig": {"voiceConfig": {"prebuiltVoiceConfig": {"voiceName": TTS_VOICE}}}
+        }
+    }
+    response = requests.post(url, headers={"x-goog-api-key": key}, json=payload, timeout=20)
+    response.raise_for_status()
+    data = response.json()
+    parts = data["candidates"][0]["content"]["parts"]
+    inline = next(p["inlineData"] for p in parts if "inlineData" in p)
+    pcm = base64.b64decode(inline["data"])
+    if not pcm:
+        raise RuntimeError("Gemini TTS returned empty audio")
+    stream = io.BytesIO()
+    with wave.open(stream, "wb") as output:
+        output.setnchannels(1)
+        output.setsampwidth(2)
+        output.setframerate(24000)
+        output.writeframes(pcm)
+    return stream.getvalue()
+
+
+def _local_speech(text: str, lang: str) -> bytes:
     if not shutil.which("espeak-ng"):
         raise RuntimeError("espeak-ng not installed")
-    # espeak WAV goes to the configured default user-session output, including Bluetooth.
     wav = subprocess.run(["espeak-ng", "--stdout", "-v", VOICES.get(lang, lang),
                           "-s", "150", text], capture_output=True)
     if wav.returncode:
-        raise RuntimeError("Text-to-speech failed: " + wav.stderr.decode(errors="replace")[:200])
+        raise RuntimeError("Local speech synthesis failed: " + wav.stderr.decode(errors="replace")[:200])
+    return wav.stdout
+
+
+def say(text: str, lang: str):
+    print(f"[{lang}] {text} | TTS provider: {TTS_PROVIDER}", flush=True)
+    if TTS_PROVIDER == "gemini":
+        try:
+            wav = _gemini_speech(text)
+        except Exception as exc:
+            print("Gemini Despina TTS unavailable; using local fallback:", str(exc)[:200], flush=True)
+            wav = _local_speech(text, lang)
+    else:
+        wav = _local_speech(text, lang)
     if not shutil.which("paplay"):
         raise RuntimeError("paplay unavailable; install pulseaudio-utils")
-    result = subprocess.run(["paplay"], input=wav.stdout, capture_output=True)
+    result = subprocess.run(["paplay"], input=wav, capture_output=True)
     if result.returncode:
-        raise RuntimeError("Bluetooth/default audio error: " + result.stderr.decode(errors="replace")[:300])
+        raise RuntimeError("Default audio output failed: " + result.stderr.decode(errors="replace")[:300])
 
 
 def play(alert: dict):
