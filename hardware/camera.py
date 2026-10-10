@@ -105,12 +105,16 @@ def send(image: bytes) -> None:
             f = requests.post(f"{SERVER_URL}/api/camera/fight",
                 files={"photo": ("camera.jpg", image, "image/jpeg")},
                 headers={"X-Admin-Token": token}, timeout=60)
-            if f.ok and f.json().get("announced"):
-                print("Possible fight alert queued for speaker")
-            elif not f.ok:
-                print("Fight classifier returned", f.status_code)
+            if f.ok:
+                result = f.json()
+                print("Fight AI:",result,flush=True)
+                if result.get("announced"): print("Possible fight alert queued for speaker",flush=True)
+            else:
+                print("Fight classifier returned", f.status_code, f.text[:200],flush=True)
         except requests.RequestException as exc:
-            print("Fight classifier unavailable:", exc)
+            print("Fight classifier unavailable:", exc,flush=True)
+    else:
+        print("Fight AI skipped: no ADMIN_TOKEN in camera service",flush=True)
     body = resp.json()
     print("Submitted camera report:", body.get("report", {}).get("id"), "- AI analysis queued")
 
