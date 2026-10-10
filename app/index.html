@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Neighbor Alert Miami</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0b3d5c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="NeighborAlert">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; font: 16px/1.4 system-ui, sans-serif; color: #12202b; }
+  body { display: flex; flex-direction: column; padding-top: env(safe-area-inset-top); }
+  header { background: #0b3d5c; color: #fff; padding: 8px 12px; display: flex; align-items: center; gap: 8px; }
+  header h1 { font-size: 1.05rem; margin: 0; flex: 1; }
+  select, button, input, textarea { font: inherit; }
+  header select { padding: 4px; border-radius: 6px; }
+  .banner { padding: 8px 12px; font-size: .9rem; }
+  #alert { background: #c62828; color: #fff; font-weight: 600; }
+  #tide { background: #e3f2fd; }
+  #tide.elevated { background: #fff3cd; }
+  #tide.high { background: #ffd6d6; }
+  #safety { background: #111; color: #ffeb3b; text-align: center; font-weight: 700; }
+  [hidden] { display: none !important; }
+  #map { flex: 1; min-height: 200px; }
+  .pin { width: 18px; height: 18px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 4px #0008; }
+  .badge { display: inline-block; background: #555; color: #fff; border-radius: 4px; padding: 0 5px; font-size: .75rem; }
+  #fab { position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); z-index: 1000;
+    background: #d32f2f; color: #fff; border: 0; border-radius: 28px; padding: 14px 20px; font-weight: 700;
+    box-shadow: 0 2px 8px #0006; }
+  #sheet { position: fixed; inset: 0; z-index: 2000; background: #0008; display: flex; align-items: flex-end; }
+  #sheet form { background: #fff; width: 100%; max-height: 92%; overflow: auto; padding: 16px;
+    border-radius: 16px 16px 0 0; display: grid; gap: 10px; }
+  #sheet label { font-weight: 600; display: grid; gap: 4px; }
+  #sheet input[type=text], #sheet textarea { width: 100%; padding: 10px; border: 1px solid #aaa; border-radius: 8px; }
+  .row { display: flex; gap: 8px; }
+  .row > * { flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #888; background: #f4f4f4; }
+  .row .primary { background: #0b3d5c; color: #fff; border-color: #0b3d5c; font-weight: 700; }
+  #msg { min-height: 1.4em; font-weight: 600; }
+  #msg.err { color: #c62828; }
+  .spin { display: inline-block; width: 14px; height: 14px; border: 2px solid #0b3d5c; border-right-color: transparent;
+    border-radius: 50%; animation: s 1s linear infinite; vertical-align: -2px; }
+  @keyframes s { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<header>
+  <h1>🌊 Neighbor Alert Miami</h1>
+  <select id="lang" aria-label="Language">
+    <option value="en">EN</option><option value="es">ES</option><option value="ht">HT</option>
+  </select>
+</header>
+<div id="alert" class="banner" role="alert" hidden></div>
+<div id="tide" class="banner" hidden></div>
+<div id="safety" class="banner" data-t="safety"></div>
+<div id="map"></div>
+<button id="fab" data-t="report"></button>
+
+<div id="sheet" hidden>
+  <form id="form">
+    <label><span data-t="photo"></span>
+      <input type="file" id="photo" accept="image/*" capture="environment"></label>
+    <label><span data-t="text"></span>
+      <textarea id="text" rows="3"></textarea></label>
+    <button type="button" id="mic" data-t="voice"></button>
+    <label><span data-t="area"></span><input type="text" id="area"></label>
+    <div id="loc"></div>
+    <div id="msg"></div>
+    <div class="row">
+      <button type="button" id="cancel" data-t="cancel"></button>
+      <button type="submit" id="send" class="primary" data-t="send"></button>
+    </div>
+  </form>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const T = {
+  en: { safety: "Never walk or drive through flood water.", report: "＋ Report", photo: "Photo", text: "What do you see?",
+    voice: "🎤 Speak", area: "Street or neighborhood (optional)", cancel: "Cancel", send: "Send report",
+    analyzing: "Analyzing...", unconfirmed: "Unconfirmed", locating: "Getting your location...", loc: "📍 Location set",
+    noloc: "Location needed. Allow location access and retry.", empty: "Add a photo or text.", sending: "Sending and analyzing (5-15 s)...",
+    thanks: "Thanks! Report sent.", e400: "Invalid report: add a photo or text.", e413: "Photo too large (max 10 MB).",
+    e502: "AI failed, please try again.", eNet: "Network error, try again.", nomic: "Voice not supported on this browser.",
+    tide: "Next high tide", stale: "updated", cars: "Cars can pass", nocars: "Cars cannot pass", depth: "Depth", in: "in" },
+  es: { safety: "Nunca camine ni conduzca por agua de inundación.", report: "＋ Reportar", photo: "Foto", text: "¿Qué ve?",
+    voice: "🎤 Hablar", area: "Calle o barrio (opcional)", cancel: "Cancelar", send: "Enviar reporte",
+    analyzing: "Analizando...", unconfirmed: "Sin confirmar", locating: "Obteniendo ubicación...", loc: "📍 Ubicación lista",
+    noloc: "Se necesita ubicación. Permita el acceso y reintente.", empty: "Agregue una foto o texto.", sending: "Enviando y analizando (5-15 s)...",
+    thanks: "¡Gracias! Reporte enviado.", e400: "Reporte inválido: agregue foto o texto.", e413: "Foto muy grande (máx. 10 MB).",
+    e502: "Falló la IA, intente de nuevo.", eNet: "Error de red, intente de nuevo.", nomic: "Voz no disponible en este navegador.",
+    tide: "Próxima marea alta", stale: "actualizado", cars: "Los autos pueden pasar", nocars: "Los autos no pueden pasar", depth: "Profundidad", in: "pulg" },
+  ht: { safety: "Pa mache ni kondui nan dlo inondasyon.", report: "＋ Rapòte", photo: "Foto", text: "Kisa ou wè?",
+    voice: "🎤 Pale", area: "Ri oswa katye (opsyonèl)", cancel: "Anile", send: "Voye rapò",
+    analyzing: "Analiz...", unconfirmed: "Pa konfime", locating: "N ap jwenn kote ou ye...", loc: "📍 Kote a mete",
+    noloc: "Nou bezwen kote ou ye. Pèmèt aksè epi eseye ankò.", empty: "Ajoute yon foto oswa tèks.", sending: "N ap voye ak analize (5-15 s)...",
+    thanks: "Mèsi! Rapò voye.", e400: "Rapò pa valid: ajoute foto oswa tèks.", e413: "Foto twò gwo (maks 10 MB).",
+    e502: "IA a echwe, tanpri eseye ankò.", eNet: "Erè rezo, eseye ankò.", nomic: "Navigatè sa a pa sipòte vwa.",
+    tide: "Pwochen mare wo", stale: "mizajou", cars: "Machin ka pase", nocars: "Machin pa ka pase", depth: "Pwofondè", in: "pous" },
+};
+const COLORS = { none: "#2e7d32", low: "#fbc02d", moderate: "#f57c00", severe: "#d32f2f", analyzing: "#9e9e9e" };
+let lang = localStorage.lang || "en";
+const t = k => T[lang][k] || T.en[k];
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+const map = L.map("map").setView([25.7617, -80.1918], 12);
+L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "© OpenStreetMap" }).addTo(map);
+const markers = {};
+let reports = [], lastAlert = null, lastTide = null, pos = null, centered = false;
+
+const isAnalyzing = r => r.status === "analyzing" || !r.analysis;
+
+function popup(r) {
+  if (isAnalyzing(r)) return `<b>${t("analyzing")}</b>`;
+  const a = r.analysis;
+  let h = `<b>${esc(a.type)}</b> · ${esc(a.severity)}`;
+  if (a.needs_confirmation) h += ` <span class="badge">${t("unconfirmed")}</span>`;
+  if (r.area) h += `<br>${esc(r.area)}`;
+  h += `<br>${esc((a.summary && (a.summary[lang] || a.summary.en)) || r.text)}`;
+  if (a.type === "flood") {
+    if (a.depth_in != null) h += `<br>${t("depth")}: ${esc(a.depth_in)} ${t("in")}`;
+    if (a.car_passable != null) h += `<br>${a.car_passable ? t("cars") : t("nocars")}`;
+  }
+  if (r.photo_url) h += `<br><img src="${esc(r.photo_url)}" style="max-width:200px;margin-top:4px">`;
+  return h;
+}
+
+function drawReports() {
+  const seen = new Set();
+  for (const r of reports) {
+    seen.add(r.id);
+    const color = isAnalyzing(r) ? COLORS.analyzing : COLORS[r.analysis.severity] || COLORS.none;
+    const icon = L.divIcon({ className: "", iconSize: [18, 18], html: `<div class="pin" style="background:${color}"></div>` });
+    let m = markers[r.id];
+    if (!m) m = markers[r.id] = L.marker([r.lat, r.lng], { icon }).addTo(map).bindPopup("");
+    m.setIcon(icon);
+    m.setPopupContent(popup(r));
+  }
+  for (const id in markers) if (!seen.has(id)) { map.removeLayer(markers[id]); delete markers[id]; }
+}
+
+function drawBanners() {
+  const a = lastAlert;
+  $("alert").hidden = !a;
+  if (a) $("alert").textContent = "🚨 " + (a.message[lang] || a.message.en);
+  const d = lastTide;
+  $("tide").hidden = !d;
+  if (d) {
+    $("tide").className = "banner " + d.risk;
+    let s = (d.alert && (d.alert[lang] || d.alert.en)) || "";
+    if (d.next_high) s += ` ${t("tide")}: ${new Date(d.next_high.time).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })} (${d.next_high.height_ft} ft)`;
+    if (d.stale) s += ` (${t("stale")} ${new Date(d.updated_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })})`;
+    $("tide").textContent = "🌊 " + s;
+  }
+}
+
+const get = u => fetch(u).then(r => r.ok ? r.json() : Promise.reject(r.status));
+async function poll() {
+  const [r, a, d] = await Promise.allSettled([get("/api/reports?hours=24"), get("/api/alerts/latest"), get("/api/tide")]);
+  if (r.status === "fulfilled") {
+    reports = r.value;
+    drawReports();
+    if (!centered && reports.length) { centered = true; map.fitBounds(reports.map(x => [x.lat, x.lng]), { maxZoom: 15, padding: [30, 30] }); }
+  }
+  if (a.status === "fulfilled") lastAlert = a.value.alert;
+  if (d.status === "fulfilled") lastTide = d.value;
+  drawBanners();
+}
+
+function applyLang() {
+  document.documentElement.lang = lang;
+  document.querySelectorAll("[data-t]").forEach(e => e.textContent = t(e.dataset.t));
+  $("lang").value = lang;
+  drawReports(); drawBanners();
+}
+$("lang").onchange = e => { lang = e.target.value; localStorage.lang = lang; applyLang(); };
+
+// --- report form ---
+function say(k, err) { $("msg").className = err ? "err" : ""; $("msg").textContent = k ? t(k) : ""; }
+function locate() {
+  $("loc").textContent = t("locating");
+  navigator.geolocation?.getCurrentPosition(p => {
+    pos = { lat: p.coords.latitude, lng: p.coords.longitude };
+    $("loc").textContent = t("loc");
+    map.setView([pos.lat, pos.lng], 15);
+  }, () => { pos = null; $("loc").textContent = t("noloc"); }, { enableHighAccuracy: true, timeout: 10000 });
+}
+$("fab").onclick = () => { $("sheet").hidden = false; say(""); locate(); };
+$("cancel").onclick = () => $("sheet").hidden = true;
+
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+$("mic").onclick = () => {
+  if (!SR) return say("nomic", true);
+  const rec = new SR();
+  rec.lang = { en: "en-US", es: "es-US", ht: "fr-HT" }[lang];
+  rec.onresult = e => { $("text").value = ($("text").value + " " + e.results[0][0].transcript).trim(); };
+  rec.start();
+};
+
+$("form").onsubmit = async e => {
+  e.preventDefault();
+  const file = $("photo").files[0], text = $("text").value.trim();
+  if (!file && !text) return say("empty", true);
+  if (!pos) { locate(); return say("noloc", true); }
+  const fd = new FormData();
+  fd.append("lat", pos.lat); fd.append("lng", pos.lng);
+  if (file) fd.append("photo", file);
+  if (text) fd.append("text", text);
+  if ($("area").value.trim()) fd.append("area", $("area").value.trim());
+  $("send").disabled = true;
+  $("msg").className = ""; $("msg").innerHTML = `<span class="spin"></span> ${t("sending")}`;
+  try {
+    const r = await fetch("/api/reports", { method: "POST", body: fd });
+    if (!r.ok) return say({ 400: "e400", 413: "e413", 502: "e502" }[r.status] || "eNet", true);
+    say("thanks");
+    $("form").reset();
+    setTimeout(() => $("sheet").hidden = true, 1200);
+    poll();
+  } catch { say("eNet", true); }
+  finally { $("send").disabled = false; }
+};
+
+applyLang();
+poll();
+setInterval(poll, 5000);
+</script>
+</body>
+</html>

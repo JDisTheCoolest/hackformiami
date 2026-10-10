@@ -1,0 +1,8 @@
+{
+  "name": "Neighbor Alert Miami",
+  "short_name": "NeighborAlert",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0b3d5c",
+  "theme_color": "#0b3d5c"
+}
