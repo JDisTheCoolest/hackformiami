@@ -370,7 +370,7 @@ class Manager(tk.Tk):
         tk.Label(area,text="Local service: http://127.0.0.1:8000  ·  Public Cloudflare route should point here.",bg=PANEL,fg=MUTED,wraplength=620,justify="left").pack(anchor="w",pady=8)
         tk.Button(area,text="Install / update website and API",bg="#176657",fg=FG,relief="flat",padx=13,pady=11,command=self.install_site).pack(anchor="w",pady=10)
         tk.Button(area,text="Check service and AI mode",bg=PANEL2,fg=FG,relief="flat",padx=13,pady=10,command=self.check_site).pack(anchor="w",pady=7)
-        tk.Label(area,text="AI configuration: the backend uses GEMINI_API_KEY from /etc/hackformiami/backend.env. With no key, it explicitly runs in MOCK mode (sample results).",bg=PANEL,fg=MUTED,wraplength=650,justify="left").pack(anchor="w",pady=12)
+        tk.Label(area,text="AI configuration: gamma uses the Google AI credential configured in /etc/hackformiami/backend.env. Without a key, the backend runs in MOCK mode (sample results).",bg=PANEL,fg=MUTED,wraplength=650,justify="left").pack(anchor="w",pady=12)
         tk.Label(area,text="To set the AI key securely, use the Pi terminal: sudoedit /etc/hackformiami/backend.env\nThen: sudo systemctl restart hackformiami-site",bg=PANEL,fg="#f1d395",wraplength=650,justify="left").pack(anchor="w",pady=12)
         tk.Label(area,text="The current app/ directory contains no functional reporting frontend yet, so /app/ may still be unavailable even when the landing page and API work.",bg=PANEL,fg=MUTED,wraplength=650,justify="left").pack(anchor="w")
         self.check_site()
