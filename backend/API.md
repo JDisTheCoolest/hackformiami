@@ -16,7 +16,12 @@ Interactive docs: `/docs`. All responses are JSON.
 
 Voice: turn speech into text in the browser (Web Speech API) and send it as `text`.
 
-Response:
+Returns **immediately** (~10 ms) with `status: "analyzing"` and `analysis: null`. Gemma runs in the
+background (usually 2-20 s, up to ~60 s if the first model is slow). Poll `GET /api/reports` until the
+report's `status` is `done` or `failed`. The alert check runs after the analysis, so the top-level
+`alert` is always `null` here; read alerts from `/api/alerts/latest`.
+
+Response (shown after analysis finished; right after POST `status` is `"analyzing"` and `analysis` is `null`):
 ```json
 {
   "report": {
@@ -27,6 +32,7 @@ Response:
     "photo_url": "/photos/r_1a2b3c4d.jpg",
     "created_at": "2026-10-10T11:40:00-04:00",
     "mock": false,
+    "status": "done",
     "analysis": {
       "is_disaster": true,
       "type": "flood",
@@ -36,6 +42,7 @@ Response:
       "hazards": ["floating debris"],
       "reference_object": "tire",
       "confidence": 0.9,
+      "model": "gemma-4-31b-it",
       "needs_confirmation": false,
       "reasoning": "Water covers the wheel rims.",
       "summary": { "en": "...", "es": "...", "ht": "..." }
@@ -49,11 +56,16 @@ Response:
 - `type`: `flood` | `fire` | `downed_power_line` | `downed_tree` | `storm_damage` | `other` | `none`
 - `severity`: `none` | `low` | `moderate` | `severe` → map colors: green / yellow / orange / red
 - `needs_confirmation: true` → show "Unconfirmed" badge (confidence below 0.6)
+- `status`: `analyzing` (show a gray "analyzing..." pin) | `done` (colored pin) | `failed` (AI failed after
+  all retries; `analysis` is `null`, `error` has the reason; show "try again"). `analysis` is `null` unless `done`.
+- `analysis.model`: which model answered. Order: `GEMMA_MODEL` twice, then `FALLBACK_MODEL`
+  (`gemma-4-26b-a4b-it`), then optional non-Gemma `FLASH_MODEL` (empty by default = Gemma 4 only).
+  Photos are shrunk to max 1024 px before sending; thinking is set to `minimal`; each attempt times out after `MODEL_TIMEOUT_S` (20).
 - `photo_url` can be `null` for text-only reports
-- Errors: `400` (no photo and no text, not an image), `413` (photo > 10 MB), `502` (AI failed, show "try again")
+- Errors: `400` (no photo and no text, not an image), `413` (photo > 10 MB). AI failures no longer return 502: the report gets `status: "failed"`.
 
 ## GET /api/reports?hours=24 — all reports for the map (newest first)
-Array of `report` objects.
+Array of `report` objects, including `analyzing` and `failed` ones (check `status`).
 
 ## GET /api/alerts/latest — for the speaker (poll every 5 s)
 ```json

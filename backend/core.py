@@ -208,6 +208,11 @@ class Store:
             self.data["reports"].append(report)
             self.save()
 
+    def update(self, report: dict, **fields):
+        with self.lock:
+            report.update(fields)
+            self.save()
+
     def add_alert(self, alert: dict):
         with self.lock:
             self.data["alerts"].append(alert)
@@ -274,7 +279,7 @@ def maybe_create_alert(store: Store, report: dict, threshold: int, radius_m: flo
         alerts = list(store.data["alerts"])
 
     cluster = [r for r in reports
-               if r["analysis"]["type"] == atype and recent(r) and near(r) and qualifies(r, min_conf)]
+               if r.get("analysis") and r["analysis"]["type"] == atype and recent(r) and near(r) and qualifies(r, min_conf)]
     if len(cluster) < threshold:
         return None
     # don't fire twice for the same area/type within the window
