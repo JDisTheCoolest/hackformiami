@@ -2,7 +2,26 @@
 set -euo pipefail
 cd /opt/hackformiami
 sudo apt-get update
-sudo apt-get install -y espeak-ng pulseaudio-utils alsa-utils python3-requests python3-opencv fswebcam v4l-utils
+sudo apt-get install -y espeak-ng pulseaudio-utils alsa-utils python3-requests python3-opencv fswebcam v4l-utils curl
+# Small local MobileNet SSD: detects only Pascal VOC class 15 (person).
+# Download model files once. Keep model weights on Pi, never upload video for person boxes.
+MODEL_DIR=/opt/hackformiami/hardware/models
+sudo install -d -m 0755 "$MODEL_DIR"
+for FILE in deploy.prototxt mobilenet_iter_73000.caffemodel; do
+  if [[ ! -s "$MODEL_DIR/$FILE" ]]; then
+    TMP="$(mktemp)"
+    if curl --fail --location --retry 3 --connect-timeout 15 --max-time 180 \
+      "https://cdn.jsdelivr.net/gh/chuanqi305/MobileNet-SSD@master/$FILE" -o "$TMP"; then
+      sudo install -m 0644 "$TMP" "$MODEL_DIR/$FILE"
+    else
+      echo "Failed to download $FILE; camera tracking needs these weights." >&2
+      rm -f "$TMP"
+      exit 1
+    fi
+    rm -f "$TMP"
+  fi
+done
+[[ $(stat -c %s "$MODEL_DIR/mobilenet_iter_73000.caffemodel") -gt 10000000 ]] || { echo "Model weights are incomplete" >&2; exit 1; }
 sudo install -d -m 0755 /var/lib/hackformiami-hardware
 sudo install -d -m 0750 /etc/hackformiami
 if [[ ! -f /etc/hackformiami/hardware.env ]]; then
