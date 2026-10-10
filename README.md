@@ -22,3 +22,7 @@ Miami is shaped by four elemental forces. Our project looks at how each one affe
 See [LICENSE](LICENSE).
 
 AQ.Ab8RN6KP-5SfZL4d2350cnUQPfsXmwremOeNWfBbLncTo0pk9w
+
+GEMINI_API_KEY=AQ.Ab8RN6KP-5SfZL4d2350cnUQPfsXmwremOeNWfBbLncTo0pk9w
+NEXT_PUBLIC_SUPABASE_URL=https://mrykisufzaspazjeougw.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1yeWtpc3VmemFzcGF6amVvdWd3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE2MzQwOTUsImV4cCI6MjEwNzIxMDA5NX0.tAEF4ESgEqgm-S-_95Gh-OEtUOxamG7Rt7kbZtGlpbg
