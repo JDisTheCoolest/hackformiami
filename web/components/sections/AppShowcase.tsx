@@ -28,7 +28,7 @@ export function AppShowcase() {
 
   return (
     <section id="app" aria-labelledby="app-title" className="relative overflow-hidden border-t hairline bg-[linear-gradient(180deg,#030814_0%,#06152f_100%)] py-24 sm:py-32">
-      <div className="mx-auto grid max-w-[1440px] items-center gap-14 px-4 sm:px-6 lg:grid-cols-12 lg:px-10">
+      <div className="mx-auto grid max-w-[1440px] grid-cols-1 items-center gap-14 px-4 sm:px-6 lg:grid-cols-12 lg:px-10">
         <Reveal className="lg:col-span-5">
           <SectionLabel>The app</SectionLabel>
           <h2 id="app-title" className="mt-5 text-balance text-4xl font-semibold leading-[1] tracking-[-0.04em] text-foam sm:text-6xl">
@@ -78,11 +78,10 @@ export function AppShowcase() {
               <ellipse key={r} cx="200" cy="200" rx={r} ry={r * 0.82} fill="none" stroke="rgba(101,217,242,0.12)" />
             ))}
           </svg>
-          <Reveal>
-            <PhoneFrame
-              label={`4forces app preview: ${SCREENS[i].label} screen`}
-              className="w-[min(78vw,330px)] drop-shadow-[0_40px_80px_rgba(0,0,0,0.6)]"
-            >
+          <Reveal className="relative">
+            {/* shadow as its own layer: a CSS filter on the phone would break the live map's compositing */}
+            <div aria-hidden="true" className="absolute inset-x-[8%] bottom-[-3%] top-[6%] rounded-[3rem] bg-black/60 blur-3xl" />
+            <PhoneFrame label={`4forces app preview: ${SCREENS[i].label} screen`} className="w-[min(78vw,330px)]">
               <div id="phone-preview" className="relative h-full">
                 {SCREENS.map((s, n) => (
                   <div

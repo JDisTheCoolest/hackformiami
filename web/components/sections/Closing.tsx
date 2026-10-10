@@ -97,7 +97,7 @@ export function Footer() {
           </p>
           <p>
             Data: tide predictions from NOAA CO-OPS (station 8723214, Virginia Key) via the 4forces API; reports from
-            neighbors, analyzed by Gemma 4. Map coastline is simplified and illustrative. Visuals marked
+            neighbors, analyzed by Gemma 4. Basemap tiles &copy; Esri and OpenStreetMap contributors. Visuals marked
             &ldquo;sample&rdquo; or &ldquo;illustrative&rdquo; are not observations.
           </p>
           <p>Photographs supplied by the team for this prototype; usage rights to be confirmed before public release.

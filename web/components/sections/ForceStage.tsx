@@ -1,5 +1,5 @@
 import { useRef, useState, type KeyboardEvent } from "react";
-import { AirField, FireField, LandField, WaterField } from "@/components/visuals/ForceVisuals";
+import { ScanView, type Detection, type Reading } from "@/components/visuals/ScanView";
 import { ProvenanceTag } from "@/components/ui/live-status";
 import { Reveal, SectionLabel } from "@/components/ui/reveal";
 import { cn } from "@/lib/utils";
@@ -14,7 +14,15 @@ interface Force {
   planned: string[];
   accent: string;
   ring: string;
-  Visual: () => React.JSX.Element;
+  hex: string;
+  scan: {
+    src?: string;
+    natural?: { w: number; h: number };
+    position?: [number, number];
+    alt?: string;
+    detections: Detection[];
+    reading: Reading;
+  };
 }
 
 const FORCES: Force[] = [
@@ -30,7 +38,19 @@ const FORCES: Force[] = [
     planned: ["Street-level water-level sensors", "Rainfall feeds"],
     accent: "text-cyan",
     ring: "bg-cyan",
-    Visual: WaterField,
+    hex: "#65d9f2",
+    scan: {
+      src: "/assets/images/flooded-residential-street.jpg",
+      natural: { w: 1200, h: 675 },
+      position: [0.5, 0.55],
+      alt: "Aerial view of a car driving through a flooded residential street.",
+      detections: [
+        { x: 43.5, y: 44, w: 14.5, h: 29, label: "Vehicle in flood water", detail: "Bow wave at the bumper · cars should avoid" },
+        { x: 64, y: 18, w: 28, h: 46, label: "Road under water", detail: "Lane markings submerged" },
+        { x: 3, y: 25, w: 30, h: 32, label: "Standing water", detail: "Lawns and driveways flooded" },
+      ],
+      reading: { title: "Flood detected · severe", confidence: 91, caption: "confidence" },
+    },
   },
   {
     id: "air",
@@ -41,7 +61,19 @@ const FORCES: Force[] = [
     planned: ["Wind and pressure data", "Official NWS watches and warnings with source and time"],
     accent: "text-air",
     ring: "bg-air",
-    Visual: AirField,
+    hex: "#cfdcf2",
+    scan: {
+      src: "/assets/images/miami-storm-skyline.jpg",
+      natural: { w: 962, h: 667 },
+      position: [0.5, 0.45],
+      alt: "Palm trees bending in strong wind in front of the downtown Miami skyline.",
+      detections: [
+        { x: 34, y: 26, w: 29, h: 45, label: "Palm canopy bent", detail: "Sustained strong wind", at: "inside" },
+        { x: 63, y: 29, w: 27, h: 40, label: "Fronds pushed flat", detail: "Gusts likely", at: "inside" },
+        { x: 36, y: 72, w: 38, h: 19, label: "Skyline", detail: "Low cloud, poor visibility", at: "right" },
+      ],
+      reading: { title: "Storm conditions · moderate", confidence: 78, caption: "confidence" },
+    },
   },
   {
     id: "land",
@@ -52,7 +84,19 @@ const FORCES: Force[] = [
     planned: ["Elevation and terrain layers to show which blocks flood first"],
     accent: "text-land",
     ring: "bg-land",
-    Visual: LandField,
+    hex: "#9db48a",
+    scan: {
+      src: "/assets/images/miami-urban-street.jpg",
+      natural: { w: 660, h: 371 },
+      position: [0.5, 0.5],
+      alt: "A busy downtown Miami street with pedestrians, police motorcycles and a fire truck.",
+      detections: [
+        { x: 57, y: 37, w: 15, h: 34, label: "Response vehicles", detail: "Police motorcycles in the lane", at: "below" },
+        { x: 84, y: 2, w: 15, h: 16, label: "Fire engine" },
+        { x: 2, y: 15, w: 46, h: 55, label: "Crowd", detail: "Dense foot traffic at the curb", at: "inside" },
+      ],
+      reading: { title: "Road partly blocked", confidence: 82, caption: "confidence" },
+    },
   },
   {
     id: "fire",
@@ -63,12 +107,25 @@ const FORCES: Force[] = [
     planned: ["Heat-index data", "Wildfire and smoke feeds"],
     accent: "text-fire",
     ring: "bg-fire",
-    Visual: FireField,
+    hex: "#ff8a3d",
+    scan: {
+      src: "/assets/images/wildfire-night.jpg",
+      natural: { w: 1600, h: 1066 },
+      position: [0.5, 0.55],
+      alt: "A wildfire burning through trees on a hillside at night under a glowing smoke plume.",
+      detections: [
+        { x: 15, y: 19, w: 78, h: 30, label: "Smoke plume", detail: "Tall, wind-driven column", at: "inside" },
+        { x: 42, y: 52, w: 52, h: 20, label: "Active fire line", detail: "Spreading along the ridge", at: "below" },
+        { x: 23, y: 53, w: 11, h: 31, label: "Power line in fire path", at: "right" },
+      ],
+      reading: { title: "Wildfire detected · severe", confidence: 94, caption: "confidence" },
+    },
   },
 ];
 
 export function ForceStage() {
   const [active, setActive] = useState(0);
+  const [picked, setPicked] = useState(false);
   const tabs = useRef<(HTMLButtonElement | null)[]>([]);
   const force = FORCES[active];
 
@@ -77,6 +134,7 @@ export function ForceStage() {
     if (!dir) return;
     e.preventDefault();
     const next = (active + dir + FORCES.length) % FORCES.length;
+    setPicked(true);
     setActive(next);
     tabs.current[next]?.focus();
   };
@@ -112,7 +170,10 @@ export function ForceStage() {
                   aria-selected={selected}
                   aria-controls="force-panel"
                   tabIndex={selected ? 0 : -1}
-                  onClick={() => setActive(i)}
+                  onClick={() => {
+                    setPicked(true);
+                    setActive(i);
+                  }}
                   className={cn(
                     "group relative flex min-w-[9.5rem] flex-1 flex-col rounded-2xl border p-4 text-left transition-colors duration-300 lg:min-w-0 lg:flex-none lg:p-6",
                     selected ? "border-foam/25 bg-foam/[0.06]" : "border-line hover:border-foam/15 hover:bg-foam/[0.03]",
@@ -131,23 +192,18 @@ export function ForceStage() {
           <div id="force-panel" role="tabpanel" aria-labelledby={`force-tab-${force.id}`} className="lg:col-span-8">
             <div className="relative aspect-[4/3] overflow-hidden rounded-2xl border hairline bg-abyss sm:aspect-[16/10]">
               <div key={force.id} className="absolute inset-0 [animation:stage-in_900ms_var(--ease-out-expo)_both]">
-                <force.Visual />
+                <ScanView
+                  {...force.scan}
+                  accent={force.hex}
+                  onCycleEnd={() => !picked && setActive((a) => (a + 1) % FORCES.length)}
+                />
               </div>
-              <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(3,8,20,0)_65%,rgba(3,8,20,0.45)_100%)]" />
-              <p
-                aria-hidden="true"
-                className={cn(
-                  "pointer-events-none absolute -bottom-[0.18em] left-4 select-none text-[clamp(4rem,14vw,11rem)] font-semibold leading-none tracking-[-0.06em] opacity-90 mix-blend-screen sm:left-6",
-                  force.accent,
-                )}
-              >
-                {force.name}
-              </p>
-              <div className="absolute right-4 top-4 flex gap-2">
-                <ProvenanceTag kind="illustrative">Illustrative visual</ProvenanceTag>
+              <div className="absolute bottom-6 right-6 hidden gap-2 sm:flex">
+                <ProvenanceTag kind="illustrative" className="bg-abyss/60 backdrop-blur">Example AI reading · not live</ProvenanceTag>
               </div>
             </div>
 
+            <p className="mt-3 text-xs text-dim sm:hidden">Example AI reading on a team photo — not live data.</p>
             <div className="mt-6 grid gap-6 rounded-2xl border hairline p-6 sm:grid-cols-3">
               <div>
                 <p className="label-sm text-dim">What it watches</p>

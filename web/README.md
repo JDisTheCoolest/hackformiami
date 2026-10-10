@@ -25,7 +25,8 @@ Node 20+ (tested with Node 24 on Apple Silicon / darwin-arm64).
 | `VITE_API_BASE` | Base URL for the read-only API calls | empty = same origin |
 | `DEV_API_PROXY` | Dev-server proxy target for `/api` | `http://localhost:8000` |
 
-`.env.development` points the app link at `http://localhost:8000/app/` for local work. See `.env.example`.
+Put overrides in **`.env.local` at the repository root** (`vite.config.ts` sets `envDir` to the root; `web/` has no env files of its own).
+Without one, `npm run dev` links the app to `http://localhost:8000/app/` and builds link to `/app/`. See `web/.env.example`.
 
 > **Heads-up:** `app/` currently contains only a README (no `index.html` yet), so `/app/` will 404 until the app lands.
 
@@ -48,7 +49,7 @@ If the backend is unreachable, every consumer shows a labeled fallback. Nothing 
 | Where | Live when API is up | When offline |
 |---|---|---|
 | Hero status line | API + AI model status | "API not connected" |
-| Miami map | Real reports, colored by severity; NOAA station is its real location | No markers; coastline labeled "simplified" |
+| Miami map (Leaflet, Esri dark-gray basemap) | Real reports at their real coordinates, colored by severity; NOAA station | No report markers |
 | Assistant (tide / alert questions) | NOAA tide via API, latest 4forces alert, with source + time | Demo answer, labeled |
 | Phone preview | Tide + latest alert | Sample values from `backend/API.md`, labeled "Sample data" |
 
@@ -63,8 +64,8 @@ web/
 ├── components/
 │   ├── brand/      EyeMark (the "o" with eyes), Wordmark
 │   ├── ui/         app-link (shared CTA), iphone-16-pro, live-status, reveal, news-video
-│   ├── visuals/    ParticleWave, ForceVisuals (water/air/gusts/land/fire), MiamiMap, OrbCanvas
-│   ├── sections/   Nav, Hero + HeroScenes, SignalChain, ForceStage, MiamiFocus, HowItWorks, Assistant, AppShowcase, Hardware, Closing
+│   ├── visuals/    ParticleWave, ForceVisuals (gusts/land/fire), ScanView, CityMap (Leaflet), OrbCanvas
+│   ├── sections/   Nav, Hero + HeroScenes, LiveCity (simulated replay), Community (chat concept), SignalChain, ForceStage, MiamiFocus, HowItWorks, Assistant, AppShowcase, Hardware, Closing
 │   └── mobile/     PhoneScreens (visual preview of the app — not app code)
 ├── lib/            config, api, live-data, assistant, hooks, utils
 ├── types/          API types mirroring backend/API.md
@@ -82,9 +83,28 @@ contours, and fire is the heat shader. Scenes dissolve with a slow blur and scal
 It pauses off-screen, has a pause button, and does not auto-advance under `prefers-reduced-motion`.
 Only the visible scene's canvas or shader runs. Durations live in `SCENES`.
 
+## Four Forces "AI scan" panels
+
+`components/visuals/ScanView.tsx` runs the Four Forces panels. A scan line sweeps a team photo, and glitch tiles
+(pixelated, iridescent) break the image up along it. Detected regions then lock into crisp windows with brackets,
+and Siri-style glass capsules show what was spotted. A reading capsule counts up to a confidence score. The panel
+auto-advances through the forces until a visitor picks a tab. Detections and readings live in
+`components/sections/ForceStage.tsx`. They are **example readings, labeled "not live"**: they mirror the backend's
+output (hazard, severity, confidence) but are not produced by the model.
+
+## Live city replay & community thread
+
+- `LiveCity.tsx`: a real Leaflet map that replays a **simulated** king-tide hour (labeled on screen). Flooding spreads at
+  real Miami tidal-flooding hot spots, reports and street-camera pins appear, alerts fire, and a "You" pin shows where a
+  visitor's report fits. It has play/pause and a scrubber; the scenario data is the `EVENTS`/`ZONES` arrays.
+- `Community.tsx`: concept for neighborhood threads (labeled "planned"). It includes a glass speech-bubble icon that fills
+  with glossy spheres per unread message, emoji reactions that launch upward, and a composer whose messages stay in the browser.
+
 ## Motion & performance
 
 All animation is Canvas 2D, one small raw-WebGL shader (fire), SVG and CSS. There is no three.js or animation library.
+Maps use Leaflet (pure JS) with Esri's keyless World Dark Gray Canvas tiles (attribution shown on the map).
+Don't put a CSS `filter` on an ancestor of a Leaflet map: it breaks Chromium compositing (the map and its container go blank).
 Every canvas loop pauses off-screen and in hidden tabs, caps DPR at 2, and draws one still frame under
 `prefers-reduced-motion`. The fire shader renders at half resolution and falls back to a CSS gradient without WebGL.
 
@@ -114,6 +134,7 @@ The only native build deps are rolldown, lightningcss and Tailwind's oxide; `pac
 | Honk | Phone that cycles real screens (overview → alert → report) |
 | Dayrise | Phone UI tinted by state (alert screen turns red-night) |
 | Codex × Vidu | Scanning sweep over the Miami map |
+| AI Vision Glitch Motion | Four Forces panels: segmentation-style glitch tiles, crosshairs, label tags, locked regions |
 | macOS Search → Siri, Voice Glow | Orb with idle/focused/listening/processing/responding/error states; composer glow colored by the force being asked about |
 | Animated vector characters | The "o" in 4forces: a ring with two eyes that follow the pointer and blink |
 | 21st.dev fire shader | Idea of a domain-warped fBm heat field in raw WebGL (code written from scratch) |

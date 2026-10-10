@@ -1,4 +1,4 @@
-import { MiamiMap, SEVERITY_COLOR } from "@/components/visuals/MiamiMap";
+import { CityMap, SEVERITY_COLOR } from "@/components/visuals/CityMap";
 import { ProvenanceTag } from "@/components/ui/live-status";
 import { NewsVideo } from "@/components/ui/news-video";
 import { Reveal, SectionLabel } from "@/components/ui/reveal";
@@ -41,6 +41,14 @@ const PHOTOS = [
     span: "sm:col-span-2",
     pos: "object-[50%_45%]",
   },
+  {
+    src: "/assets/images/wildfire-night.jpg",
+    alt: "A wildfire burning through trees on a hillside at night under a glowing smoke plume, with a power line in the foreground.",
+    force: "Fire",
+    tone: "text-fire",
+    caption: "Dry brush, wind and power lines are how a spark becomes a fire front.",
+    pos: "object-[55%_60%]",
+  },
 ];
 
 export function MiamiFocus() {
@@ -65,12 +73,12 @@ export function MiamiFocus() {
           <Reveal className="lg:col-span-5">
             <figure className="overflow-hidden rounded-2xl border hairline bg-[#05122a]">
               <div className="relative aspect-[6/7]">
-                <MiamiMap />
+                <CityMap />
               </div>
               <figcaption className="space-y-3 border-t hairline p-5 text-sm">
                 <div className="flex flex-wrap items-center gap-2">
-                  <ProvenanceTag kind="illustrative">Simplified coastline</ProvenanceTag>
-                  <ProvenanceTag kind="official">NOAA station 8723214 · real location</ProvenanceTag>
+                  <ProvenanceTag kind="illustrative">Basemap: Esri · OpenStreetMap</ProvenanceTag>
+                  <ProvenanceTag kind="official">NOAA tide station 8723214</ProvenanceTag>
                 </div>
                 {online && reportCount !== null ? (
                   <p className="flex flex-wrap items-center gap-2 text-mist">

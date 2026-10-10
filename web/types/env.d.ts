@@ -5,6 +5,8 @@ interface ImportMetaEnv {
   readonly VITE_APP_URL?: string;
   /** Base URL of the 4forces backend API. Empty = same origin. */
   readonly VITE_API_BASE?: string;
+  /** Optional CARTO basemaps key (Dark Matter tiles). Without it the map uses Esri's keyless dark basemap. */
+  readonly VITE_CARTO_KEY?: string;
 }
 
 interface ImportMeta {
