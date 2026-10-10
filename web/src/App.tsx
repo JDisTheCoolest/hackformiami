@@ -2,7 +2,6 @@ import { AppShowcase } from "@/components/sections/AppShowcase";
 import { Assistant } from "@/components/sections/Assistant";
 import { About, FinalCta, Footer } from "@/components/sections/Closing";
 import { ForceStage } from "@/components/sections/ForceStage";
-import { Community } from "@/components/sections/Community";
 import { Hardware } from "@/components/sections/Hardware";
 import { LiveCity } from "@/components/sections/LiveCity";
 import { Hero } from "@/components/sections/Hero";
@@ -25,7 +24,6 @@ export function MarketingHome() {
         <Assistant />
         <AppShowcase />
         <LiveCity />
-        <Community />
         <Hardware />
         <About />
         <FinalCta />
