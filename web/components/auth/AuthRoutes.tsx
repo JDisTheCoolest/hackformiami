@@ -6,6 +6,7 @@ import { AuthLayout, buttonClass, fieldClass } from "@/components/auth/AuthLayou
 import { Wordmark } from "@/components/brand/Wordmark";
 import { useAuth } from "@/lib/auth";
 import { API_BASE } from "@/lib/config";
+import { CameraView } from "@/components/account/CameraView";
 import { isSupabaseConfigured, safeRedirectPath, supabase } from "@/lib/supabase";
 
 function AuthLoader() {
@@ -194,5 +195,5 @@ export function AppHome() {
       setError(reason instanceof Error ? reason.message : "Could not sign out.");
     }
   }
-  return <main className="min-h-dvh bg-abyss px-4 py-6 text-foam sm:px-6 lg:px-10"><div className="mx-auto max-w-[1440px]"><header className="flex flex-wrap items-center justify-between gap-4 border-b hairline pb-6"><Wordmark className="text-2xl" /><div className="flex items-center gap-3"><span className="hidden text-sm text-mist sm:block">{user?.email}</span><button onClick={logout} className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-foam/20 px-4 text-sm font-medium hover:bg-foam/10"><LogOut className="size-4" /> Log out</button></div></header>{error && <div className="mt-5"><ErrorMessage message={error} /></div>}<section className="grid min-h-[70vh] place-items-center py-16 text-center"><div><p className="label-sm uppercase tracking-[0.18em] text-cyan">Authenticated workspace</p><h1 className="mt-4 text-4xl font-semibold tracking-[-0.045em] sm:text-6xl">Welcome to 4forces.</h1><p className="mx-auto mt-5 max-w-xl text-lg text-mist">Your session is active. The app interface can be developed here without changing the authentication boundary.</p></div></section></div></main>;
+  return <main className="min-h-dvh bg-abyss px-4 py-6 text-foam sm:px-6 lg:px-10"><div className="mx-auto max-w-[1440px]"><header className="flex flex-wrap items-center justify-between gap-4 border-b hairline pb-6"><Wordmark className="text-2xl" /><div className="flex items-center gap-3"><span className="hidden text-sm text-mist sm:block">{user?.email}</span><button onClick={logout} className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-foam/20 px-4 text-sm font-medium hover:bg-foam/10"><LogOut className="size-4" /> Log out</button></div></header>{error && <div className="mt-5"><ErrorMessage message={error} /></div>}<section className="grid min-h-[70vh] place-items-center py-16 text-center"><div><p className="label-sm uppercase tracking-[0.18em] text-cyan">Authenticated workspace</p><h1 className="mt-4 text-4xl font-semibold tracking-[-0.045em] sm:text-6xl">Welcome to 4forces.</h1><p className="mx-auto mt-5 max-w-xl text-lg text-mist">Your session is active. Check recent community reports and your authenticated camera snapshot below.</p></div></section><CameraView /></div></main>;
 }
