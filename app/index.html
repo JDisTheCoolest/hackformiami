@@ -68,15 +68,22 @@
   .card, .tidecard, #status, .arow { border: 1px solid var(--line); border-radius: 14px; background: var(--deep); padding: 16px; }
 
   /* tide */
-  .tidecard { --rc: var(--sev-moderate); }
+  .tidecard { --rc: var(--sev-moderate); border: 0; background: none; padding: 4px 0 0; border-radius: 0; }
   .tidecard .top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
   .tidecard .big { margin: 6px 0 0; font-size: 2.5rem; font-weight: 600; letter-spacing: -.04em; line-height: 1; color: var(--rc); }
   .tidecard svg.curve { display: block; width: 100%; height: 64px; margin-top: 12px; overflow: visible; }
   .tidecard .foot { display: flex; justify-content: space-between; margin-top: 6px; font-size: .75rem; color: var(--mist); font-variant-numeric: tabular-nums; }
 
   /* map card / full map */
-  #mapslot { position: relative; height: 230px; flex: none; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); }
+  #mapslot { position: relative; height: 230px; flex: none; transition: height .3s var(--ease); border-radius: 14px; overflow: hidden; border: 1px solid var(--line); }
+  #mapslot.big { height: min(64vh, 560px); }
   #s-map .mapwrap { border-radius: 0; }
+  #mexp { position: absolute; top: 8px; right: 8px; z-index: 800; width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--line);
+    background: var(--deep); color: var(--foam); display: grid; place-items: center; padding: 0; cursor: pointer; }
+  #mexp svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+  #mexp .in, #mapslot.big #mexp .out { display: none; }
+  #mapslot.big #mexp .in { display: block; }
+  #s-map #mexp { display: none; }
   .mapwrap { position: absolute; inset: 0; }
   #map { position: absolute; inset: 0; background: var(--abyss); }
   .leaflet-tile-pane { filter: brightness(.88) saturate(1.05); }   /* satellite, a touch darker so pins and labels pop */
@@ -129,7 +136,8 @@
   .fab { justify-self: center; width: 52px; height: 52px; margin-top: -20px; border-radius: 50%; border: 4px solid var(--abyss); padding: 0; display: grid; place-items: center;
     background: var(--foam); color: var(--abyss); cursor: pointer; transition: transform .25s var(--ease); }
   .fab svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
-  .fab.open { transform: rotate(45deg); }
+  .fab .x, .fab.open .chat { display: none; }
+  .fab.open .x { display: block; }
 
   /* report pins: flat halo + core with a dark stroke (dashed = unconfirmed, gray = analyzing) */
   .pin { position: relative; width: 20px; height: 20px; display: grid; place-items: center; }
@@ -220,7 +228,7 @@
   <main>
     <section id="s-home" class="screen on">
       <div id="tide" class="tidecard" hidden></div>
-      <div id="mapslot"><div class="mapwrap" id="mapwrap"><div id="cmap"></div><div id="map"></div><div id="wcard" hidden><div class="txt"><p class="big" id="wbig"></p><p class="sub" id="wcars"></p><p class="src" id="wcap"></p></div><button type="button" id="wx" aria-label="Close">×</button></div></div></div>
+      <div id="mapslot"><div class="mapwrap" id="mapwrap"><button type="button" id="mexp" aria-label="Resize map"><svg class="out" viewBox="0 0 24 24"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg><svg class="in" viewBox="0 0 24 24"><path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7"/></svg></button><div id="cmap"></div><div id="map"></div><div id="wcard" hidden><div class="txt"><p class="big" id="wbig"></p><p class="sub" id="wcars"></p><p class="src" id="wcap"></p></div><button type="button" id="wx" aria-label="Close">×</button></div></div></div>
       <div id="rcount"></div>
       <div id="status" class="ok">
         <div class="txt"><p class="lbl" id="slbl"></p><h1></h1><p class="sub"></p><p class="src" id="ssrc"></p></div>
@@ -256,7 +264,7 @@
   <nav id="tabs">
     <button type="button" class="tab" data-go="home" aria-current="page"><svg viewBox="0 0 24 24"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span data-t="navHome"></span></button>
     <button type="button" class="tab" data-go="map"><svg viewBox="0 0 24 24"><path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"/><path d="M15 5.764v15M9 3.236v15"/></svg><span data-t="navMap"></span></button>
-    <button type="button" class="fab" id="fab" aria-label="Report"><svg viewBox="0 0 24 24"><path d="M5 12h14M12 5v14"/></svg></button>
+    <button type="button" class="fab" id="fab" aria-label="Report / chat"><svg class="chat" viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg><svg class="x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
     <button type="button" class="tab" data-go="alerts"><svg viewBox="0 0 24 24"><path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/></svg><span data-t="navAlerts"></span></button>
     <button type="button" class="tab" data-go="me"><svg viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span data-t="navMe"></span></button>
   </nav>
@@ -889,6 +897,11 @@ function czClear(flyBack) {
   cz.viewer.scene.requestRender();
 }
 $("wx").onclick = () => czClear(true);
+$("mexp").onclick = () => {   // card <-> tall map; then let both map engines pick up the new size
+  $("mapslot").classList.toggle("big");
+  const fit = () => { map.invalidateSize(); if (cz) { cz.viewer.resize(); cz.viewer.scene.requestRender(); } };
+  setTimeout(fit, 330); fit();
+};
 
 function loadScript(src) { return new Promise((ok, no) => { const e = document.createElement("script"); e.src = src; e.onload = ok; e.onerror = no; document.head.append(e); }); }
 
