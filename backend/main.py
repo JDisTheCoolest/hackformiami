@@ -9,6 +9,7 @@ Without GEMINI_API_KEY the server runs in MOCK mode (fake AI results),
 so the website and the speaker can be built before the AI part is ready.
 """
 import os
+from typing import Optional
 from pathlib import Path
 
 from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile
@@ -50,7 +51,7 @@ if not MOCK:
     _client = genai.Client(api_key=GEMINI_API_KEY)
 
 
-def analyze_report(img: bytes | None, mime: str, text: str) -> dict:
+def analyze_report(img: Optional[bytes], mime: str, text: str) -> dict:
     """Photo, text, or both -> one Gemma 4 call -> normalized analysis."""
     has_photo = img is not None
     if MOCK:
@@ -85,7 +86,7 @@ def health():
 
 @app.post("/api/reports")
 def create_report(lat: float = Form(...), lng: float = Form(...), area: str = Form(""),
-                  text: str = Form(""), photo: UploadFile | None = File(None)):
+                  text: str = Form(""), photo: Optional[UploadFile] = File(None)):
     """A report = photo, text, or both (voice: the app turns speech into text first)."""
     text = text.strip()[:1000]
     img, mime = None, "image/jpeg"
