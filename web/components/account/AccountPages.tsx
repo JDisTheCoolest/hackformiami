@@ -1,13 +1,12 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { LogOut } from "lucide-react";
+import { Link } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
+import { AppShell } from "@/components/app/AppShell";
 
 const input = "mt-1 w-full rounded-xl border border-foam/15 bg-abyss px-3 py-2 text-foam";
 function Shell({ title, children }: { title: string; children: ReactNode }) {
-  const { user, signOut } = useAuth(); const navigate = useNavigate();
-  return <main className="min-h-dvh bg-abyss px-4 py-6 text-foam sm:px-8"><header className="mx-auto flex max-w-5xl flex-wrap items-center gap-4 border-b hairline pb-5"><Link to="/" className="text-xl font-semibold">4forces</Link><nav className="ml-auto flex flex-wrap gap-3 text-sm text-mist"><Link to="/app/">App</Link><Link to="/account">Account</Link><Link to="/reports">Reports</Link><Link to="/alerts">Alerts</Link><Link to="/settings">Settings</Link></nav><span className="text-xs text-dim">{user?.email}</span><button onClick={() => void signOut().then(() => navigate('/login'))} className="inline-flex items-center gap-2 rounded-lg border border-foam/20 px-3 py-2 text-sm"><LogOut className="size-4" />Log out</button></header><section className="mx-auto max-w-5xl py-10"><p className="label-sm uppercase tracking-[.16em] text-cyan">Account</p><h1 className="mt-2 text-4xl font-semibold">{title}</h1><div className="mt-8">{children}</div></section></main>;
+  return <AppShell title={title} eyebrow="Protected workspace"><section className="py-2"><p className="label-sm uppercase tracking-[.16em] text-cyan">4forces workspace</p><h2 className="mt-2 text-3xl font-semibold tracking-[-.035em] sm:text-4xl">{title}</h2><div className="mt-8">{children}</div></section></AppShell>;
 }
 function Notice({ value }: { value: string }) { return value ? <p className="mb-4 rounded-lg border border-cyan/25 bg-cyan/10 p-3 text-sm text-foam">{value}</p> : null; }
 

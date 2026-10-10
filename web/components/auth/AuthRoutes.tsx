@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/auth";
 import { API_BASE } from "@/lib/config";
 import { CameraView } from "@/components/account/CameraView";
 import { isSupabaseConfigured, safeRedirectPath, supabase } from "@/lib/supabase";
+import { LiveDataProvider } from "@/lib/live-data";
 
 function AuthLoader() {
   return <main className="grid min-h-dvh place-items-center bg-abyss text-cyan"><LoaderCircle className="size-7 animate-spin" aria-label="Loading session" /></main>;
@@ -41,7 +42,7 @@ export function ProtectedRoute() {
   if (!user) return <Navigate to={`/login?next=${encodeURIComponent(location.pathname + location.search)}`} replace />;
   if (verification === "checking") return <AuthLoader />;
   if (verification === "failed") return <main className="grid min-h-dvh place-items-center bg-abyss px-4 text-center text-foam"><div><h1 className="text-3xl font-semibold">We couldn’t verify your session.</h1><p className="mt-3 text-mist">Check that the 4forces API is running, then try again.</p><button onClick={() => window.location.reload()} className="mt-6 h-11 rounded-xl bg-foam px-5 font-semibold text-abyss">Try again</button></div></main>;
-  return <Outlet />;
+  return <LiveDataProvider><Outlet /></LiveDataProvider>;
 }
 
 export function GuestRoute() {

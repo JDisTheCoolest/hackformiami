@@ -3,7 +3,8 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import "@/src/styles/globals.css";
 import { MarketingHome } from "@/src/App";
-import { AppHome, ConfirmPage, GuestRoute, LoginPage, ProtectedRoute, SignupPage } from "@/components/auth/AuthRoutes";
+import { ConfirmPage, GuestRoute, LoginPage, ProtectedRoute, SignupPage } from "@/components/auth/AuthRoutes";
+import { Dashboard } from "@/components/app/Dashboard";
 import { AuthProvider } from "@/lib/auth";
 import { AccountPage, AlertsPage, NewReportPage, ReportsPage, SettingsPage } from "@/components/account/AccountPages";
 
@@ -19,7 +20,7 @@ createRoot(document.getElementById("root")!).render(
           </Route>
           <Route path="/auth/confirm" element={<ConfirmPage />} />
           <Route element={<ProtectedRoute />}>
-            <Route path="/app/*" element={<AppHome />} />
+            <Route path="/app/*" element={<Dashboard />} />
             <Route path="/account" element={<AccountPage />} />
             <Route path="/reports" element={<ReportsPage />} />
             <Route path="/reports/new" element={<NewReportPage />} />
