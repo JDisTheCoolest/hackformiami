@@ -201,8 +201,26 @@
   #main[data-s=rec] { background: rgb(101 217 242 / .2); color: var(--cyan); }
   #box.rec #attach { visibility: hidden; }
   #hint { margin: 10px 0 0; text-align: center; font-size: .8125rem; line-height: 1.25rem; font-weight: 500; color: var(--dim); }
+  /* 3D water-level overlay */
+  .p3d { display: block; margin-top: 8px; height: 32px; padding: 0 12px; border: 1px solid rgb(101 217 242 / .4); border-radius: 999px;
+    background: rgb(101 217 242 / .12); color: var(--cyan); font-size: .8125rem; font-weight: 500; cursor: pointer; }
+  #v3 { position: fixed; inset: 0; z-index: 3000; display: flex; flex-direction: column;
+    background: radial-gradient(120% 60% at 50% 0%, #0e2a8f 0%, rgb(10 31 69 / 0) 70%), linear-gradient(180deg, var(--trench), var(--abyss) 70%); animation: stage-in .5s var(--ease) both; }
+  #v3x { position: absolute; top: calc(12px + env(safe-area-inset-top)); right: 12px; z-index: 2; width: 40px; height: 40px; border-radius: 50%;
+    border: 1px solid rgb(238 244 255 / .15); background: rgb(3 8 20 / .6); color: var(--foam); font-size: 22px; line-height: 1; cursor: pointer; }
+  #v3c { position: relative; flex: 1; min-height: 0; }
+  #v3c canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+  #v3c svg.side { position: absolute; inset: 0; margin: auto; width: 100%; max-width: 480px; height: auto; }
+  .rise { transform-box: fill-box; transform-origin: bottom; animation: rise 2.2s var(--ease) both; }
+  @keyframes rise { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+  #v3info { padding: 4px 20px calc(18px + env(safe-area-inset-bottom)); max-width: 480px; width: 100%; margin: 0 auto; }
+  #v3depth { margin: 0; font-size: clamp(2.6rem, 14vw, 3.6rem); font-weight: 600; letter-spacing: -.045em; line-height: .95; color: var(--cyan); }
+  #v3line { margin: 8px 0 0; font-size: 1.2rem; font-weight: 500; color: var(--foam); }
+  #v3cars { margin: 4px 0 0; color: var(--mist); }
+  #v3cap { margin: 12px 0 0; font-size: .75rem; color: var(--dim); }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; } }
 </style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
 </head>
 <body>
 <div id="app">
@@ -256,6 +274,12 @@
   </nav>
 </div>
 
+<div id="v3" role="dialog" aria-modal="true" aria-labelledby="v3depth" hidden>
+  <button type="button" id="v3x" aria-label="Close">×</button>
+  <div id="v3c"></div>
+  <div id="v3info"><p id="v3depth"></p><p id="v3line"></p><p id="v3cars"></p><p id="v3cap"></p></div>
+</div>
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 // per type: [near you, possible nearby, short noun]
@@ -277,7 +301,8 @@ const TYPES = {
     other: ["Ijans toupre ou", "Posib ijans toupre", "ijans"] },
 };
 const T = {
-  en: { navHome: "Home", navMap: "Map", navAlerts: "Alerts", navMe: "Me", langLabel: "Language", tideRisk: "Tide risk", king: "King-tide window", now: "Now", high: "High", riskw: { low: "Low", elevated: "Elevated", high: "High" }, reports24: "reports · 24 h", listen: "Listen", noAlerts: "No alerts yet.", neighbors: "neighbor reports", ago: "min ago", test: "test alert", live: "Live", offline: "Offline", yourLoc: "Your location", miami: "Miami, Florida", reporter: "Reporter ID",
+  en: { view3d: "3D water level", illus: "Illustration based on AI depth estimate, not a survey.", lvls: ["Below the curb", "Above the curb", "Halfway up the wheels", "At the car doors", "Knee-deep"], close: "Close",
+    navHome: "Home", navMap: "Map", navAlerts: "Alerts", navMe: "Me", langLabel: "Language", tideRisk: "Tide risk", king: "King-tide window", now: "Now", high: "High", riskw: { low: "Low", elevated: "Elevated", high: "High" }, reports24: "reports · 24 h", listen: "Listen", noAlerts: "No alerts yet.", neighbors: "neighbor reports", ago: "min ago", test: "test alert", live: "Live", offline: "Offline", yourLoc: "Your location", miami: "Miami, Florida", reporter: "Reporter ID",
     textph: "Report flooding: add a photo or describe what you see", hint: "📍 Your location · tap the map to change",
     none: "No flooding near you", nexthigh: "Next high tide", warn: "Don't walk or drive through water", unconf: "Not confirmed yet",
     analyzing: "Analyzing...", unconfirmed: "Unconfirmed", sev: { none: "No", low: "Minor", moderate: "Moderate", severe: "Severe" },
@@ -286,7 +311,8 @@ const T = {
     thanksPhoto: "Checking your photo...", thanks: "Checking your report...", failed: "Couldn't read this report. Please try again.",
     e400: "Add a photo or text.", e413: "Photo too large (max 10 MB).", e502: "AI failed, please try again.", eNet: "Network error, try again.",
     nomic: "Voice not supported here.", listening: "Listening..." },
-  es: { navHome: "Inicio", navMap: "Mapa", navAlerts: "Alertas", navMe: "Yo", langLabel: "Idioma", tideRisk: "Riesgo de marea", king: "Marea viva", now: "Ahora", high: "Alta", riskw: { low: "Bajo", elevated: "Elevado", high: "Alto" }, reports24: "reportes · 24 h", listen: "Escuchar", noAlerts: "Aún no hay alertas.", neighbors: "reportes de vecinos", ago: "min", test: "alerta de prueba", live: "En vivo", offline: "Sin conexión", yourLoc: "Su ubicación", miami: "Miami, Florida", reporter: "ID de reportero",
+  es: { view3d: "Nivel del agua en 3D", illus: "Ilustración basada en una estimación de profundidad de la IA, no en un levantamiento.", lvls: ["Debajo del borde de la acera", "Sobre el borde de la acera", "A media altura de las ruedas", "A la altura de las puertas del auto", "A la altura de la rodilla"], close: "Cerrar",
+    navHome: "Inicio", navMap: "Mapa", navAlerts: "Alertas", navMe: "Yo", langLabel: "Idioma", tideRisk: "Riesgo de marea", king: "Marea viva", now: "Ahora", high: "Alta", riskw: { low: "Bajo", elevated: "Elevado", high: "Alto" }, reports24: "reportes · 24 h", listen: "Escuchar", noAlerts: "Aún no hay alertas.", neighbors: "reportes de vecinos", ago: "min", test: "alerta de prueba", live: "En vivo", offline: "Sin conexión", yourLoc: "Su ubicación", miami: "Miami, Florida", reporter: "ID de reportero",
     textph: "Reporte una inundación: agregue una foto o describa lo que ve", hint: "📍 Su ubicación · toque el mapa para cambiarla",
     none: "Sin inundación cerca de usted", nexthigh: "Próxima marea alta", warn: "No camine ni conduzca por el agua", unconf: "Aún sin confirmar",
     analyzing: "Analizando...", unconfirmed: "Sin confirmar", sev: { none: "Sin", low: "Leve", moderate: "Moderada", severe: "Grave" },
@@ -295,7 +321,8 @@ const T = {
     thanksPhoto: "Revisando su foto...", thanks: "Revisando su reporte...", failed: "No pudimos leer este reporte. Intente de nuevo.",
     e400: "Agregue una foto o texto.", e413: "Foto muy grande (máx. 10 MB).", e502: "Falló la IA, intente de nuevo.", eNet: "Error de red, intente de nuevo.",
     nomic: "Voz no disponible aquí.", listening: "Escuchando..." },
-  ht: { navHome: "Akèy", navMap: "Kat", navAlerts: "Alèt", navMe: "Mwen", langLabel: "Lang", tideRisk: "Risk mare", king: "Mare vivan", now: "Kounye a", high: "Wo", riskw: { low: "Ba", elevated: "Wo", high: "Trè wo" }, reports24: "rapò · 24 è", listen: "Koute", noAlerts: "Poko gen alèt.", neighbors: "rapò vwazen", ago: "min", test: "alèt tès", live: "An dirèk", offline: "Dekonekte", yourLoc: "Kote ou ye", miami: "Miami, Florid", reporter: "ID rapòtè",
+  ht: { view3d: "Nivo dlo an 3D", illus: "Ilistrasyon ki baze sou estimasyon pwofondè IA a, se pa yon mezi egzak.", lvls: ["Anba trotwa a", "Anwo trotwa a", "Mwatye wou yo", "Nan pòt machin yo", "Jiska jenou"], close: "Fèmen",
+    navHome: "Akèy", navMap: "Kat", navAlerts: "Alèt", navMe: "Mwen", langLabel: "Lang", tideRisk: "Risk mare", king: "Mare vivan", now: "Kounye a", high: "Wo", riskw: { low: "Ba", elevated: "Wo", high: "Trè wo" }, reports24: "rapò · 24 è", listen: "Koute", noAlerts: "Poko gen alèt.", neighbors: "rapò vwazen", ago: "min", test: "alèt tès", live: "An dirèk", offline: "Dekonekte", yourLoc: "Kote ou ye", miami: "Miami, Florid", reporter: "ID rapòtè",
     textph: "Rapòte inondasyon: ajoute yon foto oswa dekri sa ou wè", hint: "📍 Kote ou ye · touche kat la pou chanje l",
     none: "Pa gen inondasyon toupre ou", nexthigh: "Pwochen mare wo", warn: "Pa mache ni kondui nan dlo a", unconf: "Poko konfime",
     analyzing: "Analiz...", unconfirmed: "Pa konfime", sev: { none: "Pa gen", low: "Ti", moderate: "Mwayen", severe: "Grav" },
@@ -352,6 +379,7 @@ function popup(r) {
   if (a.type === "flood" && a.depth_in != null) h += ` · ${t("about")} ${esc(a.depth_in)} ${t("in")}`;
   if (a.type === "flood" && a.car_passable != null) h += `<br>${a.car_passable ? t("cars") : t("nocars")}`;
   if (a.needs_confirmation) h += `<br><span style="color:var(--dim)">${t("unconfirmed")}</span>`;
+  if (a.type === "flood" && a.depth_in != null) h += `<button type="button" class="p3d" data-id="${esc(r.id)}">${t("view3d")}</button>`;
   return h;
 }
 
@@ -645,6 +673,119 @@ const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
     setTimeout(() => { blink = true; paint(); setTimeout(() => { blink = false; paint(); }, 140); next(); }, 2800 + Math.random() * 4200);
   })();
 })();
+
+// --- 3D water-level overlay (three.js loads lazily, only when first opened) ---
+// capture phase: Leaflet stops clicks inside popups, and polling re-renders popup content every 5 s
+document.addEventListener("click", e => {
+  const b = e.target.closest?.(".p3d");
+  if (b) open3D(reports.find(x => x.id === b.dataset.id));
+}, true);
+let three = null, view = null;
+const webgl = () => { try { const c = document.createElement("canvas"); return !!(c.getContext("webgl2") || c.getContext("webgl")); } catch { return false; } };
+async function loadThree() {
+  if (!three) {
+    const [THREE, oc] = await Promise.all([import("three"), import("three/addons/controls/OrbitControls.js")]);
+    three = { THREE, OrbitControls: oc.OrbitControls };
+  }
+  return three;
+}
+const levelOf = d => d < 6 ? 0 : d < 11 ? 1 : d < 16 ? 2 : d < 22 ? 3 : 4;   // curb 6 in, wheel centre 12.5 in, doors from ~16 in, knee ~20 in
+
+async function open3D(r) {
+  if (!r || !r.analysis) return;
+  const a = r.analysis, depth = Math.max(0, Number(a.depth_in) || 0);
+  $("v3depth").textContent = `≈ ${depth} ${t("in")}`;
+  $("v3line").textContent = t("lvls")[levelOf(depth)];
+  $("v3cars").textContent = a.car_passable == null ? "" : a.car_passable ? t("cars") : t("nocars");
+  $("v3cap").textContent = t("illus");
+  $("v3x").setAttribute("aria-label", t("close"));
+  $("v3").hidden = false; $("v3x").focus();
+  const host = $("v3c"); host.innerHTML = "";
+  try {
+    if (!webgl()) throw new Error("no webgl");
+    const { THREE, OrbitControls } = await loadThree();
+    if ($("v3").hidden) return;   // closed while loading
+    view = scene3d(THREE, OrbitControls, host, depth);
+  } catch { if (!$("v3").hidden) host.innerHTML = sideSvg(depth); }   // 2D side view with the same water level
+}
+function close3D() { $("v3").hidden = true; if (view) { view.dispose(); view = null; } $("v3c").innerHTML = ""; }
+$("v3x").onclick = close3D;
+addEventListener("keydown", e => { if (e.key === "Escape" && !$("v3").hidden) close3D(); });
+
+// flat side view, 2.2 px per inch (person 66 in, tire 25 in, curb 6 in)
+function sideSvg(d) {
+  const k = 2.2, g = 160, wy = Math.max(1.5, Math.min(d, 60) * k);
+  return `<svg class="side" viewBox="0 0 400 190" role="img" aria-label="${esc(t("illus"))}">
+    <rect x="0" y="${g - 13.2}" width="90" height="${13.2 + 30}" fill="#8a8f99"/><rect x="90" y="${g}" width="310" height="30" fill="#2b2f38"/>
+    <rect x="160" y="${g - 71}" width="170" height="48" rx="8" fill="#d9e2f2"/><rect x="195" y="${g - 114}" width="105" height="43" rx="10" fill="#1a2438"/>
+    <circle cx="190" cy="${g - 27.5}" r="27.5" fill="#111" stroke="#444" stroke-width="3"/><circle cx="300" cy="${g - 27.5}" r="27.5" fill="#111" stroke="#444" stroke-width="3"/>
+    <g fill="#a9b8d3"><rect x="111" y="${g - 74}" width="12" height="74" rx="5"/><rect x="127" y="${g - 74}" width="12" height="74" rx="5"/>
+      <rect x="107" y="${g - 122}" width="36" height="50" rx="12"/><circle cx="125" cy="${g - 134}" r="10"/></g>
+    <rect class="rise" x="0" y="${g - wy}" width="400" height="${wy + 30}" fill="#2a7de1" fill-opacity=".55"/>
+    <line x1="0" x2="400" y1="${g - wy}" y2="${g - wy}" stroke="#65d9f2" stroke-opacity=".7"/></svg>`;
+}
+
+function scene3d(THREE, OrbitControls, host, depthIn) {
+  const M = 0.0254, target = depthIn * M;
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.5));
+  host.append(renderer.domElement);
+  const scene = new THREE.Scene();
+  const cam = new THREE.PerspectiveCamera(45, 1, .1, 60);
+  cam.position.set(5.2, 2.3, 6.8);
+  const ctl = new OrbitControls(cam, renderer.domElement);
+  ctl.target.set(-.2, .55, .3); ctl.enablePan = false; ctl.enableDamping = true;
+  ctl.minDistance = 3; ctl.maxDistance = 14; ctl.maxPolarAngle = Math.PI / 2 - .04;
+  scene.add(new THREE.HemisphereLight(0x9bb8ff, 0x0b1020, 1.0));
+  const sun = new THREE.DirectionalLight(0xffffff, 1.4); sun.position.set(4, 8, 5); scene.add(sun);
+
+  const box = (w, h, d, color, x, y, z) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshStandardMaterial({ color, roughness: .9 })); m.position.set(x, y, z); scene.add(m); return m; };
+  const cyl = (rt, rb, h, color, x, y, z) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, 14), new THREE.MeshStandardMaterial({ color, roughness: .8 })); m.position.set(x, y, z); scene.add(m); return m; };
+  // street: road, 6-inch sidewalk (curb face at x = -2.2), lane dashes
+  box(5.6, .04, 18, 0x2b2f38, .6, -.02, 0);
+  box(3.2, 6 * M, 18, 0x8a8f99, -3.8, 3 * M, 0);
+  for (let z = -8; z < 8; z += 2) box(.12, .005, 1, 0xe8e8d0, -.9, .003, z);
+  // sedan: tire 25 in (r = .3175 m), body 4.6 m
+  box(1.8, .55, 4.6, 0xd9e2f2, 1.1, .545, 0);
+  box(1.55, .5, 2.3, 0x1a2438, 1.1, 1.07, -.2);
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+    const w = cyl(.3175, .3175, .22, 0x111111, 1.1 + sx * .88, .3175, sz * 1.4); w.rotation.z = Math.PI / 2;
+  }
+  // person, 5.5 ft (1.68 m)
+  const pc = 0xa9b8d3, px = -1.2, pz = 2.4;
+  cyl(.07, .07, .85, pc, px - .09, .425, pz); cyl(.07, .07, .85, pc, px + .09, .425, pz);
+  cyl(.17, .17, .56, pc, px, 1.13, pz);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(.12, 14, 10), new THREE.MeshStandardMaterial({ color: pc })); head.position.set(px, 1.56, pz); scene.add(head);
+
+  // water
+  const wg = new THREE.PlaneGeometry(16, 18, 28, 28); wg.rotateX(-Math.PI / 2);
+  const water = new THREE.Mesh(wg, new THREE.MeshStandardMaterial({ color: 0x2a7de1, transparent: true, opacity: .6, roughness: .15, metalness: .1, side: THREE.DoubleSide, depthWrite: false }));
+  scene.add(water);
+  const pos = wg.attributes.position, base = Float32Array.from(pos.array);
+  const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const t0 = performance.now();
+  let raf = 0, alive = true;
+
+  const resize = () => { const w = host.clientWidth || 1, h = host.clientHeight || 1; renderer.setSize(w, h); cam.aspect = w / h; cam.updateProjectionMatrix(); };
+  addEventListener("resize", resize); resize();
+  (function loop(now) {
+    if (!alive) return;
+    raf = requestAnimationFrame(loop);
+    const k = still ? 1 : Math.min(1, (now - t0) / 2500), rise = 1 - Math.pow(1 - k, 3), tt = (now - t0) / 1000;
+    water.position.y = Math.max(.002, target * rise);
+    if (!still && target > 0) for (let i = 0; i < pos.count; i++) {
+      const x = base[i * 3], z = base[i * 3 + 2];
+      pos.setY(i, Math.sin(x * 1.3 + tt * 1.6) * .006 + Math.cos(z * 1.1 + tt * 1.2) * .006);
+    }
+    pos.needsUpdate = true;
+    ctl.update(); renderer.render(scene, cam);
+  })(performance.now());
+  return { dispose() {
+    alive = false; cancelAnimationFrame(raf); removeEventListener("resize", resize); ctl.dispose();
+    scene.traverse(o => { o.geometry?.dispose(); o.material?.dispose(); });
+    renderer.dispose(); renderer.domElement.remove();
+  } };
+}
 
 applyLang();
 state();
