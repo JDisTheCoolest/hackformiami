@@ -44,24 +44,38 @@ def set_led(color: str):
         led.on() if name == color else led.off()
 
 
+def output_audio(wav: bytes):
+    """Send WAV audio to the user's default PipeWire/PulseAudio output."""
+    if not shutil.which("paplay"):
+        raise RuntimeError("paplay missing; install pulseaudio-utils")
+    result = subprocess.run(["paplay", "--raw", "--format=s16le", "--rate=22050", "--channels=1"], input=wav, capture_output=True)
+    if result.returncode:
+        raise RuntimeError("Default audio playback failed: " + result.stderr.decode(errors="replace")[:300])
+
+
 def siren():
-    if SIREN_WAV.exists() and shutil.which("aplay"):
-        subprocess.run(["aplay", "-q", "-D", os.getenv("ALSA_DEVICE","default"), str(SIREN_WAV)])
+    if SIREN_WAV.exists() and shutil.which("paplay"):
+        result = subprocess.run(["paplay", str(SIREN_WAV)], capture_output=True)
+        if result.returncode:
+            raise RuntimeError("Siren playback failed: " + result.stderr.decode(errors="replace")[:300])
     else:
         say("Alert! Alert!", "en")
 
 
 def say(text: str, lang: str):
-    print(f"[{lang}] {text}")
-    if shutil.which("espeak-ng"):
-        wav = subprocess.run(["espeak-ng", "--stdout", "-v", VOICES.get(lang, lang), "-s", "150", text], capture_output=True)
-        if wav.returncode == 0 and shutil.which("aplay"):
-            playback = subprocess.run(["aplay", "-q", "-D", os.getenv("ALSA_DEVICE", "default")], input=wav.stdout, capture_output=True)
-            if playback.returncode:
-                print("AUDIO ERROR:", playback.stderr.decode(errors="replace")[:300], flush=True)
-                if "--test" in __import__("sys").argv: raise RuntimeError("Speaker playback failed. Choose a working ALSA_DEVICE from aplay -l.")
-        else:
-            print("TTS ERROR:", wav.stderr.decode(errors="replace")[:300], flush=True)
+    print(f"[{lang}] {text}", flush=True)
+    if not shutil.which("espeak-ng"):
+        raise RuntimeError("espeak-ng not installed")
+    # espeak WAV goes to the configured default user-session output, including Bluetooth.
+    wav = subprocess.run(["espeak-ng", "--stdout", "-v", VOICES.get(lang, lang),
+                          "-s", "150", text], capture_output=True)
+    if wav.returncode:
+        raise RuntimeError("Text-to-speech failed: " + wav.stderr.decode(errors="replace")[:200])
+    if not shutil.which("paplay"):
+        raise RuntimeError("paplay unavailable; install pulseaudio-utils")
+    result = subprocess.run(["paplay"], input=wav.stdout, capture_output=True)
+    if result.returncode:
+        raise RuntimeError("Bluetooth/default audio error: " + result.stderr.decode(errors="replace")[:300])
 
 
 def play(alert: dict):
@@ -84,7 +98,7 @@ def minutes_since(iso: str) -> float:
 
 
 def main():
-    state_file = Path(os.getenv("SPEAKER_STATE", "/var/lib/hackformiami-hardware/last_alert_id"))
+    state_file = Path(os.getenv("SPEAKER_STATE", str(Path.home() / ".local/state/4forces/last_alert_id")))
     try: last_id = state_file.read_text().strip() or None
     except OSError: last_id = None
     first = True
