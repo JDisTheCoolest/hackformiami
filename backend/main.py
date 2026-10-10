@@ -358,6 +358,18 @@ def camera_status(authorization: str = Header(None)):
     status["max_viewers"] = CAMERA_MAX_VIEWERS
     return status
 
+
+@app.get("/api/camera/tracking")
+def camera_tracking(authorization: str = Header(None)):
+    verified_supabase_user(authorization)
+    try:
+        data = json.loads(Path("/var/lib/hackformiami-hardware/tracking.json").read_text())
+        if time.time() - data.get("updated_at", 0) > 5:
+            return {"people": [], "candidates": [], "stale": True}
+        return data
+    except (OSError, ValueError):
+        return {"people": [], "candidates": [], "stale": True}
+
 @app.get("/api/tide")
 def tide():
     return core.get_tide(NOAA_STATION)
