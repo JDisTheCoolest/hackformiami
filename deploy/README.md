@@ -47,3 +47,18 @@ cd /opt/hackformiami && git pull --ff-only && bash deploy/install-manager.sh
 ## Separation from Open Seas
 
 No Open Seas application files, web server configuration, domain, or secrets are touched. No public HackForMiami website is deployed by these files.
+
+## GitHub auto-deployment (30 seconds)
+
+The installer configures `hackformiami-update.timer` to check `origin/main` every 30 seconds after each completed check. It uses the existing Pi SSH deploy key, runs as the regular Pi account, refuses local modifications or divergent history, and fast-forwards only. When files under `manager/` change, it restarts the manager; otherwise it leaves the running manager alone.
+
+After the initial one-time install, normal manager code pushes update automatically. Changes to `deploy/install-manager.sh`, timer units, or updater scripts require running `bash deploy/install-manager.sh` again to apply new infrastructure configuration. A deployed application needs its own restart/build procedure later; this does **not** promise to deploy an application not yet implemented.
+
+```bash
+systemctl list-timers hackformiami-update.timer --no-pager
+systemctl status hackformiami-update.timer --no-pager
+cat /var/lib/hackformiami-update/status
+sudo journalctl -u hackformiami-update.service -n 30 --no-pager
+```
+
+**Security:** The updater trusts pushes to `main` and executes updated Python manager code; restrict who can push and consider GitHub branch protection. The web manager remains read-only and local-only; expose through Cloudflare Access, not an unprotected hostname.
