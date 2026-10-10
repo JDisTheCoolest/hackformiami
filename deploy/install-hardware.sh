@@ -11,13 +11,14 @@ SERVER_URL=http://127.0.0.1:8000
 INTERVAL=10
 PREVIEW_INTERVAL=2
 CAMERA_SNAPSHOT_PATH=/var/lib/hackformiami-hardware/latest.jpg
-CAM_AI_ENABLED=0
+CAM_AI_ENABLED=1
 CAM_LAT=0
 CAM_LNG=0
 CAM_AREA=Unconfigured camera
 REPORTER_ID=pi-cam-1
 SPEAK_LANGS=en
 POLL_SECONDS=5
+ALSA_DEVICE=default
 ENV
 fi
 sudo chmod 644 /etc/hackformiami/hardware.env
