@@ -3,130 +3,259 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Neighbor Alert Miami</title>
+<title>4forces</title>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0b3d5c">
+<meta name="theme-color" content="#030814">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="NeighborAlert">
+<meta name="apple-mobile-web-app-title" content="4forces">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
-  * { box-sizing: border-box; }
-  html, body { height: 100%; margin: 0; font: 16px/1.4 system-ui, sans-serif; color: #12202b; }
-  body { display: flex; flex-direction: column; padding-top: env(safe-area-inset-top); }
-  header { background: #0b3d5c; color: #fff; padding: 8px 12px; display: flex; align-items: center; gap: 8px; }
-  header h1 { font-size: 1.05rem; margin: 0; flex: 1; }
-  select, button, input, textarea { font: inherit; }
-  header select { padding: 4px; border-radius: 6px; }
-  .banner { padding: 8px 12px; font-size: .9rem; }
-  #alert { background: #c62828; color: #fff; font-weight: 600; }
-  #tide { background: #e3f2fd; }
-  #tide.elevated { background: #fff3cd; }
-  #tide.high { background: #ffd6d6; }
-  #safety { background: #111; color: #ffeb3b; text-align: center; font-weight: 700; }
+  /* tokens copied from web/src/styles/globals.css */
+  :root {
+    --abyss: #030814; --deep: #06152f; --trench: #0a1f45;
+    --electric: #2868ff; --cyan: #65d9f2; --foam: #eef4ff; --mist: #a9b8d3; --dim: #7f8ca8;
+    --line: rgb(169 184 211 / .14);
+    --sev-none: #4cc38a; --sev-low: #f2d14b; --sev-moderate: #ff9b3d; --sev-severe: #ff4d4d;
+    --ease: cubic-bezier(.16, 1, .3, 1);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; margin: 0; background: var(--abyss); color: var(--foam);
+    font: 15px/1.4 "Inter Tight", ui-sans-serif, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  button, input, textarea, select { font: inherit; color: inherit; }
   [hidden] { display: none !important; }
-  #map { flex: 1; min-height: 200px; }
-  .pin { width: 18px; height: 18px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 4px #0008; }
-  .badge { display: inline-block; background: #555; color: #fff; border-radius: 4px; padding: 0 5px; font-size: .75rem; }
-  #fab { position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); z-index: 1000;
-    background: #d32f2f; color: #fff; border: 0; border-radius: 28px; padding: 14px 20px; font-weight: 700;
-    box-shadow: 0 2px 8px #0006; }
-  #sheet { position: fixed; inset: 0; z-index: 2000; background: #0008; display: flex; align-items: flex-end; }
-  #sheet form { background: #fff; width: 100%; max-height: 92%; overflow: auto; padding: 16px;
-    border-radius: 16px 16px 0 0; display: grid; gap: 10px; }
-  #sheet label { font-weight: 600; display: grid; gap: 4px; }
-  #sheet input[type=text], #sheet textarea { width: 100%; padding: 10px; border: 1px solid #aaa; border-radius: 8px; }
-  .row { display: flex; gap: 8px; }
-  .row > * { flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #888; background: #f4f4f4; }
-  .row .primary { background: #0b3d5c; color: #fff; border-color: #0b3d5c; font-weight: 700; }
-  #msg { min-height: 1.4em; font-weight: 600; }
-  #msg.err { color: #c62828; }
-  .spin { display: inline-block; width: 14px; height: 14px; border: 2px solid #0b3d5c; border-right-color: transparent;
-    border-radius: 50%; animation: s 1s linear infinite; vertical-align: -2px; }
-  @keyframes s { to { transform: rotate(360deg); } }
+  :focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; border-radius: 4px; }
+
+  #app { height: 100%; max-width: 480px; margin: 0 auto; display: flex; flex-direction: column;
+    padding-top: env(safe-area-inset-top); position: relative; }
+  header { display: flex; align-items: center; gap: 10px; padding: 12px 16px 8px; }
+  .brand { flex: 1; font-size: 20px; font-weight: 600; letter-spacing: -.045em; display: flex; align-items: baseline; margin: 0; }
+  .brand svg { width: .72em; height: .72em; margin: 0 1px; overflow: visible; }
+  .eyes { transform-box: fill-box; transform-origin: center; animation: blink 5s infinite; }
+  @keyframes blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(.1); } }
+  .chip { font-size: 11px; font-weight: 500; border: 1px solid; border-radius: 4px; padding: 1px 6px; }
+  .chip.live { color: var(--sev-none); border-color: rgb(76 195 138 / .4); }
+  .chip.off { color: var(--sev-low); border-color: rgb(242 209 75 / .4); }
+  #lang { background: rgb(238 244 255 / .06); border: 1px solid var(--line); border-radius: 6px; padding: 3px 4px; }
+  #lang option { background: var(--deep); }
+
+  .safety { margin: 0 16px 6px; font-size: 12px; font-weight: 500; color: var(--sev-low); text-align: center; }
+
+  main { flex: 1; min-height: 0; position: relative; }
+  .screen { position: absolute; inset: 0; overflow-y: auto; padding: 4px 16px 20px; display: none;
+    flex-direction: column; gap: 12px; }
+  .screen.on { display: flex; }
+  #s-overview, #s-report { background: linear-gradient(180deg, var(--trench) 0%, var(--abyss) 55%); }
+  #s-alert { background: linear-gradient(180deg, #3a0d12 0%, #14060c 40%, var(--abyss) 80%); }
+
+  .card { border: 1px solid var(--line); background: rgb(238 244 255 / .04); border-radius: 12px; padding: 12px; }
+  .tide { border-color: rgb(101 217 242 / .2); background: rgb(101 217 242 / .06); }
+  .k { font-size: 11px; font-weight: 500; color: var(--dim); }
+  .k.cy { color: var(--cyan); }
+  .risk-low { color: var(--sev-none); } .risk-elevated { color: var(--sev-moderate); } .risk-high { color: var(--sev-severe); }
+  .mist { color: var(--mist); font-size: 13px; }
+  h2 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -.03em; line-height: 1.1; }
+
+  .mapbox { position: relative; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; height: 300px; flex: none; }
+  .mapbox.small { height: 180px; }
+  .mapbox > div { height: 100%; background: var(--abyss); }
+  .mapbox .tag { position: absolute; left: 8px; top: 8px; z-index: 500; background: rgb(3 8 20 / .8); color: var(--mist);
+    font-size: 11px; font-weight: 500; padding: 1px 6px; border-radius: 4px; pointer-events: none; }
+  .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .tiles .card { padding: 8px 10px; }
+  .tiles b { display: block; font-size: 15px; font-weight: 500; margin-top: 2px; }
+
+  .alertcard { width: 100%; text-align: left; cursor: pointer; border: 1px solid rgb(255 77 77 / .3); background: rgb(255 77 77 / .08);
+    border-radius: 12px; padding: 12px; }
+  .alertcard.none { border-color: var(--line); background: rgb(238 244 255 / .03); cursor: default; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+
+  .tools { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .tool { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 14px 0; cursor: pointer;
+    border: 1px solid var(--line); background: rgb(238 244 255 / .04); border-radius: 12px; font-size: 13px; }
+  .tool svg { width: 22px; height: 22px; stroke: var(--cyan); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .tool.on { border-color: var(--cyan); }
+  #thumb { width: 100%; max-height: 140px; object-fit: cover; border-radius: 10px; border: 1px solid var(--line); }
+  textarea, input[type=text] { width: 100%; background: rgb(238 244 255 / .05); border: 1px solid var(--line);
+    border-radius: 10px; padding: 10px 12px; resize: vertical; }
+  ::placeholder { color: var(--dim); }
+  #msg { min-height: 1.3em; font-weight: 500; font-size: 14px; color: var(--cyan); }
+  #msg.err { color: var(--sev-severe); }
+  .cta { background: var(--cyan); color: var(--abyss); border: 0; border-radius: 12px; padding: 14px; font-weight: 600; cursor: pointer; }
+  .cta:disabled { opacity: .5; }
+  .spin { display: inline-block; width: 13px; height: 13px; border: 2px solid var(--cyan); border-right-color: transparent;
+    border-radius: 50%; animation: spin 1s linear infinite; vertical-align: -2px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .lvl { font-size: 12px; font-weight: 500; color: var(--sev-severe); }
+  .msgcard p { margin: 2px 0 0; font-size: 14px; }
+  .bar { margin-top: auto; background: var(--foam); color: var(--abyss); border-radius: 12px; padding: 12px; text-align: center; font-weight: 600; }
+
+  nav { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--line); background: var(--abyss);
+    padding-bottom: env(safe-area-inset-bottom); }
+  nav button { background: none; border: 0; padding: 10px 0 8px; color: var(--dim); display: flex; flex-direction: column;
+    align-items: center; gap: 3px; font-size: 11px; font-weight: 500; cursor: pointer; position: relative; }
+  nav button svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  nav button[aria-current=page] { color: var(--cyan); }
+  nav .badge { position: absolute; top: 6px; left: calc(50% + 6px); width: 9px; height: 9px; border-radius: 50%; background: var(--sev-severe); }
+
+  .pin { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--abyss); box-shadow: 0 0 0 1px rgb(238 244 255 / .5); }
+  .pin.an { animation: pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: .45; } }
+  .pick { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--cyan); background: rgb(101 217 242 / .3); }
+  .leaflet-popup-content-wrapper, .leaflet-popup-tip { background: var(--deep); color: var(--foam); border: 1px solid var(--line); }
+  .leaflet-popup-content { font-size: 13px; margin: 10px 12px; }
+  .leaflet-container a.leaflet-popup-close-button { color: var(--mist); }
+  .leaflet-control-attribution { background: rgb(3 8 20 / .7) !important; color: var(--dim) !important; }
+  .leaflet-control-attribution a { color: var(--mist) !important; }
+  .badge2 { display: inline-block; background: rgb(255 155 61 / .2); color: var(--sev-moderate); border-radius: 4px; padding: 0 5px; font-size: 11px; }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .001ms !important; } }
 </style>
 </head>
 <body>
-<header>
-  <h1>🌊 Neighbor Alert Miami</h1>
-  <select id="lang" aria-label="Language">
-    <option value="en">EN</option><option value="es">ES</option><option value="ht">HT</option>
-  </select>
-</header>
-<div id="alert" class="banner" role="alert" hidden></div>
-<div id="tide" class="banner" hidden></div>
-<div id="safety" class="banner" data-t="safety"></div>
-<div id="map"></div>
-<button id="fab" data-t="report"></button>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="eye" viewBox="0 0 100 100">
+    <circle cx="50" cy="50" r="37" fill="none" stroke="currentColor" stroke-width="13"/>
+    <g class="eyes"><ellipse cx="40" cy="50" rx="5.6" ry="8.5" fill="currentColor"/><ellipse cx="60" cy="50" rx="5.6" ry="8.5" fill="currentColor"/></g>
+  </symbol>
+</svg>
 
-<div id="sheet" hidden>
-  <form id="form">
-    <label><span data-t="photo"></span>
-      <input type="file" id="photo" accept="image/*" capture="environment"></label>
-    <label><span data-t="text"></span>
-      <textarea id="text" rows="3"></textarea></label>
-    <button type="button" id="mic" data-t="voice"></button>
-    <label><span data-t="area"></span><input type="text" id="area"></label>
-    <div id="loc"></div>
-    <div id="msg"></div>
-    <div class="row">
-      <button type="button" id="cancel" data-t="cancel"></button>
-      <button type="submit" id="send" class="primary" data-t="send"></button>
-    </div>
-  </form>
+<div id="app">
+  <header>
+    <h1 class="brand" aria-label="4forces">4f<svg aria-hidden="true"><use href="#eye"/></svg>rces</h1>
+    <span id="live" class="chip off">…</span>
+    <select id="lang" aria-label="Language"><option value="en">EN</option><option value="es">ES</option><option value="ht">HT</option></select>
+  </header>
+  <p class="safety" id="safety" data-t="safety"></p>
+
+  <main>
+    <section id="s-overview" class="screen on">
+      <div class="card tide" id="tide"><p class="k cy" data-t="tide"></p><p class="mist">…</p></div>
+      <div class="mapbox"><div id="map"></div><span class="tag" data-t="reports24"></span></div>
+      <div class="tiles">
+        <div class="card"><span class="k" data-t="tiderisk"></span><b id="t-risk">–</b></div>
+        <div class="card"><span class="k" data-t="reports"></span><b id="t-count">0</b></div>
+        <div class="card"><span class="k" data-t="severe"></span><b id="t-severe">0</b></div>
+      </div>
+      <p class="k" data-t="active"></p>
+      <button class="alertcard none" id="alertcard"></button>
+    </section>
+
+    <section id="s-report" class="screen">
+      <div><h2 data-t="reportTitle"></h2><p class="mist" data-t="reportSub"></p></div>
+      <form id="form" style="display:contents">
+        <div class="tools">
+          <label class="tool" id="tool-photo"><input type="file" id="photo" accept="image/*" capture="environment" hidden>
+            <svg viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg><span data-t="photo"></span></label>
+          <button type="button" class="tool" id="tool-text">
+            <svg viewBox="0 0 24 24"><path d="M5 6V4h14v2M12 4v16M9 20h6"/></svg><span data-t="text"></span></button>
+          <button type="button" class="tool" id="tool-voice">
+            <svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span data-t="voice"></span></button>
+        </div>
+        <img id="thumb" alt="" hidden>
+        <textarea id="textin" rows="3"></textarea>
+        <input type="text" id="area">
+        <div class="mapbox small"><div id="pmap"></div><span class="tag" data-t="tapmap"></span></div>
+        <p class="mist" id="loc"></p>
+        <div id="msg"></div>
+        <button type="submit" class="cta" id="send" data-t="send"></button>
+      </form>
+    </section>
+
+    <section id="s-alert" class="screen">
+      <div id="alert-body"></div>
+      <div class="bar" data-t="safety"></div>
+    </section>
+  </main>
+
+  <nav>
+    <button data-go="overview" aria-current="page"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7M5 10v10h14V10"/></svg><span data-t="navOverview"></span></button>
+    <button data-go="report"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg><span data-t="navReport"></span></button>
+    <button data-go="alert"><svg viewBox="0 0 24 24"><path d="M6 17V11a6 6 0 0 1 12 0v6l2 2H4zM10 21h4"/></svg><span data-t="navAlert"></span><i class="badge" id="navdot" hidden></i></button>
+  </nav>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 const T = {
-  en: { safety: "Never walk or drive through flood water.", report: "＋ Report", photo: "Photo", text: "What do you see?",
-    voice: "🎤 Speak", area: "Street or neighborhood (optional)", cancel: "Cancel", send: "Send report",
-    analyzing: "Analyzing...", unconfirmed: "Unconfirmed", locating: "Getting your location...", loc: "📍 Location set",
-    noloc: "Location needed. Allow location access and retry.", empty: "Add a photo or text.", sending: "Sending and analyzing (5-15 s)...",
-    thanks: "Thanks! Report sent.", e400: "Invalid report: add a photo or text.", e413: "Photo too large (max 10 MB).",
-    e502: "AI failed, please try again.", eNet: "Network error, try again.", nomic: "Voice not supported on this browser.",
-    tide: "Next high tide", stale: "updated", cars: "Cars can pass", nocars: "Cars cannot pass", depth: "Depth", in: "in" },
-  es: { safety: "Nunca camine ni conduzca por agua de inundación.", report: "＋ Reportar", photo: "Foto", text: "¿Qué ve?",
-    voice: "🎤 Hablar", area: "Calle o barrio (opcional)", cancel: "Cancelar", send: "Enviar reporte",
-    analyzing: "Analizando...", unconfirmed: "Sin confirmar", locating: "Obteniendo ubicación...", loc: "📍 Ubicación lista",
-    noloc: "Se necesita ubicación. Permita el acceso y reintente.", empty: "Agregue una foto o texto.", sending: "Enviando y analizando (5-15 s)...",
-    thanks: "¡Gracias! Reporte enviado.", e400: "Reporte inválido: agregue foto o texto.", e413: "Foto muy grande (máx. 10 MB).",
-    e502: "Falló la IA, intente de nuevo.", eNet: "Error de red, intente de nuevo.", nomic: "Voz no disponible en este navegador.",
-    tide: "Próxima marea alta", stale: "actualizado", cars: "Los autos pueden pasar", nocars: "Los autos no pueden pasar", depth: "Profundidad", in: "pulg" },
-  ht: { safety: "Pa mache ni kondui nan dlo inondasyon.", report: "＋ Rapòte", photo: "Foto", text: "Kisa ou wè?",
-    voice: "🎤 Pale", area: "Ri oswa katye (opsyonèl)", cancel: "Anile", send: "Voye rapò",
-    analyzing: "Analiz...", unconfirmed: "Pa konfime", locating: "N ap jwenn kote ou ye...", loc: "📍 Kote a mete",
-    noloc: "Nou bezwen kote ou ye. Pèmèt aksè epi eseye ankò.", empty: "Ajoute yon foto oswa tèks.", sending: "N ap voye ak analize (5-15 s)...",
-    thanks: "Mèsi! Rapò voye.", e400: "Rapò pa valid: ajoute foto oswa tèks.", e413: "Foto twò gwo (maks 10 MB).",
-    e502: "IA a echwe, tanpri eseye ankò.", eNet: "Erè rezo, eseye ankò.", nomic: "Navigatè sa a pa sipòte vwa.",
-    tide: "Pwochen mare wo", stale: "mizajou", cars: "Machin ka pase", nocars: "Machin pa ka pase", depth: "Pwofondè", in: "pous" },
+  en: { safety: "Never walk or drive through flood water.", navOverview: "Overview", navReport: "Report", navAlert: "Alert",
+    tide: "Tide", tiderisk: "Tide risk", reports: "Reports", severe: "Severe", reports24: "Reports · 24 h", active: "Active alerts",
+    noalert: "No 4forces alerts right now.", reportTitle: "Report what you see", reportSub: "Photo, text or voice, or all three.",
+    photo: "Photo", text: "Text", voice: "Voice", textph: "What do you see?", areaph: "Street or neighborhood (optional)",
+    tapmap: "Tap map to set location", send: "Send report", analyzing: "Analyzing...", unconfirmed: "Unconfirmed",
+    locating: "Getting your location...", loc: "📍 Location set", noloc: "Location needed. Allow access or tap the map.",
+    empty: "Add a photo or text.", sending: "Sending...", thanks: "Thanks! Report sent. AI is analyzing it.",
+    e400: "Invalid report: add a photo or text.", e413: "Photo too large (max 10 MB).", e502: "AI failed, please try again.",
+    eNet: "Network error, try again.", nomic: "Voice not supported on this browser.", listening: "Listening...",
+    nexthigh: "Next high", risk: "Risk", king: "king-tide window", stale: "updated", cars: "Cars can pass", nocars: "Cars cannot pass",
+    depth: "Depth", in: "in", live: "Live", offline: "Offline", neighbors: "neighbor reports", ago: "min ago", test: "test alert",
+    near: "near", nearYou: "you", level: "level", flood: "Flooding", fire: "Fire", noAlertTitle: "No active alerts", noAlertSub: "You'll be taken here when one arrives." },
+  es: { safety: "Nunca camine ni conduzca por agua de inundación.", navOverview: "Resumen", navReport: "Reportar", navAlert: "Alerta",
+    tide: "Marea", tiderisk: "Riesgo marea", reports: "Reportes", severe: "Graves", reports24: "Reportes · 24 h", active: "Alertas activas",
+    noalert: "No hay alertas de 4forces ahora.", reportTitle: "Reporte lo que ve", reportSub: "Foto, texto o voz, o los tres.",
+    photo: "Foto", text: "Texto", voice: "Voz", textph: "¿Qué ve?", areaph: "Calle o barrio (opcional)",
+    tapmap: "Toque el mapa para la ubicación", send: "Enviar reporte", analyzing: "Analizando...", unconfirmed: "Sin confirmar",
+    locating: "Obteniendo ubicación...", loc: "📍 Ubicación lista", noloc: "Se necesita ubicación. Permita acceso o toque el mapa.",
+    empty: "Agregue una foto o texto.", sending: "Enviando...", thanks: "¡Gracias! Reporte enviado. La IA lo está analizando.",
+    e400: "Reporte inválido: agregue foto o texto.", e413: "Foto muy grande (máx. 10 MB).", e502: "Falló la IA, intente de nuevo.",
+    eNet: "Error de red, intente de nuevo.", nomic: "Voz no disponible en este navegador.", listening: "Escuchando...",
+    nexthigh: "Próxima alta", risk: "Riesgo", king: "ventana de marea viva", stale: "actualizado", cars: "Los autos pueden pasar", nocars: "Los autos no pueden pasar",
+    depth: "Profundidad", in: "pulg", live: "En vivo", offline: "Sin conexión", neighbors: "reportes de vecinos", ago: "min", test: "alerta de prueba",
+    near: "cerca de", nearYou: "usted", level: "nivel", flood: "Inundación", fire: "Incendio", noAlertTitle: "Sin alertas activas", noAlertSub: "Vendrá aquí cuando llegue una." },
+  ht: { safety: "Pa mache ni kondui nan dlo inondasyon.", navOverview: "Apèsi", navReport: "Rapòte", navAlert: "Alèt",
+    tide: "Mare", tiderisk: "Risk mare", reports: "Rapò", severe: "Grav", reports24: "Rapò · 24 è", active: "Alèt aktif",
+    noalert: "Pa gen alèt 4forces kounye a.", reportTitle: "Rapòte sa ou wè", reportSub: "Foto, tèks oswa vwa, oswa tout twa.",
+    photo: "Foto", text: "Tèks", voice: "Vwa", textph: "Kisa ou wè?", areaph: "Ri oswa katye (opsyonèl)",
+    tapmap: "Touche kat la pou mete kote a", send: "Voye rapò", analyzing: "Analiz...", unconfirmed: "Pa konfime",
+    locating: "N ap jwenn kote ou ye...", loc: "📍 Kote a mete", noloc: "Nou bezwen kote ou ye. Pèmèt aksè oswa touche kat la.",
+    empty: "Ajoute yon foto oswa tèks.", sending: "N ap voye...", thanks: "Mèsi! Rapò voye. IA ap analize l.",
+    e400: "Rapò pa valid: ajoute foto oswa tèks.", e413: "Foto twò gwo (maks 10 MB).", e502: "IA a echwe, tanpri eseye ankò.",
+    eNet: "Erè rezo, eseye ankò.", nomic: "Navigatè sa a pa sipòte vwa.", listening: "N ap koute...",
+    nexthigh: "Pwochen mare wo", risk: "Risk", king: "fenèt mare vivan", stale: "mizajou", cars: "Machin ka pase", nocars: "Machin pa ka pase",
+    depth: "Pwofondè", in: "pous", live: "An dirèk", offline: "Aparèy dekonekte", neighbors: "rapò vwazen", ago: "min", test: "alèt tès",
+    near: "toupre", nearYou: "ou", level: "nivo", flood: "Inondasyon", fire: "Dife", noAlertTitle: "Pa gen alèt aktif", noAlertSub: "N ap mennen ou isit la lè youn rive." },
 };
-const COLORS = { none: "#2e7d32", low: "#fbc02d", moderate: "#f57c00", severe: "#d32f2f", analyzing: "#9e9e9e" };
 let lang = localStorage.lang || "en";
 const t = k => T[lang][k] || T.en[k];
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const sevColor = s => css("--sev-" + s) || css("--sev-none");
+const hhmm = iso => new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+const pretty = s => String(s || "").replace(/_/g, " ");
 
-const map = L.map("map").setView([25.7617, -80.1918], 12);
-L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "© OpenStreetMap" }).addTo(map);
+// anonymous id so the backend counts one phone as one source
+let reporterId = localStorage.reporter_id;
+if (!reporterId) { reporterId = "w_" + Math.random().toString(36).slice(2, 10); localStorage.reporter_id = reporterId; }
+
+// --- maps ---
+const TILES = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
+const ATTR = "© OpenStreetMap © CARTO";
+const mkMap = id => { const m = L.map(id, { zoomControl: false }).setView([25.7617, -80.1918], 12);
+  L.tileLayer(TILES, { maxZoom: 19, subdomains: "abcd", attribution: ATTR }).addTo(m); return m; };
+const map = mkMap("map"), pmap = mkMap("pmap");
 const markers = {};
-let reports = [], lastAlert = null, lastTide = null, pos = null, centered = false;
+let reports = [], lastAlert = null, lastTide = null, pos = null, pickMarker = null, centered = false, online = false;
 
 const isAnalyzing = r => r.status === "analyzing" || !r.analysis;
+const pinIcon = (color, an) => L.divIcon({ className: "", iconSize: [16, 16], html: `<div class="pin${an ? " an" : ""}" style="background:${color}"></div>` });
 
 function popup(r) {
   if (isAnalyzing(r)) return `<b>${t("analyzing")}</b>`;
   const a = r.analysis;
-  let h = `<b>${esc(a.type)}</b> · ${esc(a.severity)}`;
-  if (a.needs_confirmation) h += ` <span class="badge">${t("unconfirmed")}</span>`;
+  let h = `<b>${esc(pretty(a.type))}</b> · <span style="color:${sevColor(a.severity)}">${esc(a.severity)}</span>`;
+  if (a.needs_confirmation) h += ` <span class="badge2">${t("unconfirmed")}</span>`;
   if (r.area) h += `<br>${esc(r.area)}`;
   h += `<br>${esc((a.summary && (a.summary[lang] || a.summary.en)) || r.text)}`;
   if (a.type === "flood") {
     if (a.depth_in != null) h += `<br>${t("depth")}: ${esc(a.depth_in)} ${t("in")}`;
     if (a.car_passable != null) h += `<br>${a.car_passable ? t("cars") : t("nocars")}`;
   }
-  if (r.photo_url) h += `<br><img src="${esc(r.photo_url)}" style="max-width:200px;margin-top:4px">`;
+  if (r.photo_url) h += `<br><img src="${esc(r.photo_url)}" style="max-width:200px;margin-top:6px;border-radius:6px">`;
   return h;
 }
 
@@ -134,81 +263,136 @@ function drawReports() {
   const seen = new Set();
   for (const r of reports) {
     seen.add(r.id);
-    const color = isAnalyzing(r) ? COLORS.analyzing : COLORS[r.analysis.severity] || COLORS.none;
-    const icon = L.divIcon({ className: "", iconSize: [18, 18], html: `<div class="pin" style="background:${color}"></div>` });
-    let m = markers[r.id];
-    if (!m) m = markers[r.id] = L.marker([r.lat, r.lng], { icon }).addTo(map).bindPopup("");
-    m.setIcon(icon);
-    m.setPopupContent(popup(r));
+    const an = isAnalyzing(r);
+    const icon = pinIcon(an ? css("--dim") : sevColor(r.analysis.severity), an);
+    const m = markers[r.id] || (markers[r.id] = L.marker([r.lat, r.lng], { icon }).addTo(map).bindPopup(""));
+    m.setIcon(icon); m.setPopupContent(popup(r));
   }
   for (const id in markers) if (!seen.has(id)) { map.removeLayer(markers[id]); delete markers[id]; }
+  $("t-count").textContent = reports.length;
+  $("t-severe").textContent = reports.filter(r => !isAnalyzing(r) && r.analysis.severity === "severe").length;
 }
 
-function drawBanners() {
-  const a = lastAlert;
-  $("alert").hidden = !a;
-  if (a) $("alert").textContent = "🚨 " + (a.message[lang] || a.message.en);
-  const d = lastTide;
-  $("tide").hidden = !d;
-  if (d) {
-    $("tide").className = "banner " + d.risk;
-    let s = (d.alert && (d.alert[lang] || d.alert.en)) || "";
-    if (d.next_high) s += ` ${t("tide")}: ${new Date(d.next_high.time).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })} (${d.next_high.height_ft} ft)`;
-    if (d.stale) s += ` (${t("stale")} ${new Date(d.updated_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })})`;
-    $("tide").textContent = "🌊 " + s;
+// --- overview / alert rendering ---
+function drawTide() {
+  const d = lastTide, el = $("tide");
+  if (!d) { $("t-risk").textContent = "–"; return; }
+  const cap = d.risk[0].toUpperCase() + d.risk.slice(1);
+  $("t-risk").textContent = cap; $("t-risk").className = "risk-" + d.risk;
+  let h = `<p class="k cy">${t("tide")} · ${esc(d.station)}</p><p style="margin:2px 0;font-weight:500">${t("risk")} <span class="risk-${d.risk}">${cap}</span>${d.king_tide_window ? `<span class="mist"> · ${t("king")}</span>` : ""}</p>`;
+  if (d.next_high) h += `<p class="mist">${t("nexthigh")} ${hhmm(d.next_high.time)} · ${Number(d.next_high.height_ft).toFixed(2)} ft</p>`;
+  if (d.alert) h += `<p class="mist">${esc(d.alert[lang] || d.alert.en)}</p>`;
+  if (d.stale) h += `<p class="mist">(${t("stale")} ${hhmm(d.updated_at)})</p>`;
+  el.innerHTML = h;
+}
+
+const mins = iso => Math.max(0, Math.round((Date.now() - new Date(iso)) / 60000));
+const atype = a => ({ flood: t("flood"), fire: t("fire") }[a.type] || pretty(a.type));
+
+function drawAlert() {
+  const a = lastAlert, card = $("alertcard");
+  $("navdot").hidden = !a;
+  card.className = "alertcard" + (a ? "" : " none");
+  if (a) {
+    card.innerHTML = `<b><span class="dot" style="background:${sevColor(a.level)}"></span>${esc(atype(a))} · ${esc(a.area || "")}</b>
+      <p class="mist" style="margin:2px 0 0">${a.count} ${t("neighbors")} · ${mins(a.created_at)} ${t("ago")}${a.test ? " · " + t("test") : ""}</p>`;
+    $("alert-body").innerHTML = `<p class="lvl">${esc(a.level)} · ${esc(pretty(a.type))}</p>
+      <h2 style="font-size:28px;margin:6px 0">${esc(atype(a))} ${t("near")} ${esc(a.area || t("nearYou"))}</h2>
+      <p class="mist">${a.count} ${t("neighbors")} · ${mins(a.created_at)} ${t("ago")}${a.test ? " · " + t("test") : ""}</p>
+      <div style="display:grid;gap:8px;margin-top:18px">${[["en", "English"], ["es", "Español"], ["ht", "Kreyòl"]].map(([l, n]) =>
+        `<div class="card msgcard"><span class="k">${n}</span><p>${esc(a.message[l] || "—")}</p></div>`).join("")}</div>`;
+  } else {
+    card.textContent = t("noalert");
+    $("alert-body").innerHTML = `<h2>${t("noAlertTitle")}</h2><p class="mist" style="margin-top:6px">${t("noAlertSub")}</p>`;
   }
 }
+$("alertcard").onclick = () => lastAlert && show("alert");
 
+function drawStatus() {
+  $("live").className = "chip " + (online ? "live" : "off");
+  $("live").textContent = online ? t("live") : t("offline");
+}
+
+// --- screens ---
+function show(name) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.toggle("on", s.id === "s-" + name));
+  document.querySelectorAll("nav button").forEach(b => b.toggleAttribute("aria-current", b.dataset.go === name));
+  document.querySelectorAll("nav button[aria-current]").forEach(b => b.setAttribute("aria-current", "page"));
+  $("safety").hidden = name === "alert";
+  setTimeout(() => { map.invalidateSize(); pmap.invalidateSize(); }, 50);
+  if (name === "report" && !pos) locate();
+}
+document.querySelectorAll("nav button").forEach(b => b.onclick = () => show(b.dataset.go));
+
+// --- polling ---
 const get = u => fetch(u).then(r => r.ok ? r.json() : Promise.reject(r.status));
 async function poll() {
   const [r, a, d] = await Promise.allSettled([get("/api/reports?hours=24"), get("/api/alerts/latest"), get("/api/tide")]);
+  online = r.status === "fulfilled" || a.status === "fulfilled";
   if (r.status === "fulfilled") {
-    reports = r.value;
-    drawReports();
+    reports = r.value; drawReports();
     if (!centered && reports.length) { centered = true; map.fitBounds(reports.map(x => [x.lat, x.lng]), { maxZoom: 15, padding: [30, 30] }); }
   }
-  if (a.status === "fulfilled") lastAlert = a.value.alert;
+  if (a.status === "fulfilled") {
+    lastAlert = a.value.alert;
+    if (lastAlert && lastAlert.id !== localStorage.seenAlert) { localStorage.seenAlert = lastAlert.id; show("alert"); }
+  }
   if (d.status === "fulfilled") lastTide = d.value;
-  drawBanners();
+  drawTide(); drawAlert(); drawStatus();
 }
 
+// --- language ---
 function applyLang() {
   document.documentElement.lang = lang;
   document.querySelectorAll("[data-t]").forEach(e => e.textContent = t(e.dataset.t));
+  $("textin").placeholder = t("textph"); $("area").placeholder = t("areaph");
   $("lang").value = lang;
-  drawReports(); drawBanners();
+  drawReports(); drawTide(); drawAlert(); drawStatus();
+  if (pos) $("loc").textContent = t("loc");
 }
 $("lang").onchange = e => { lang = e.target.value; localStorage.lang = lang; applyLang(); };
 
 // --- report form ---
 function say(k, err) { $("msg").className = err ? "err" : ""; $("msg").textContent = k ? t(k) : ""; }
+function setPos(lat, lng) {
+  pos = { lat, lng };
+  if (pickMarker) pickMarker.setLatLng([lat, lng]);
+  else pickMarker = L.marker([lat, lng], { icon: L.divIcon({ className: "", iconSize: [18, 18], html: '<div class="pick"></div>' }) }).addTo(pmap);
+  $("loc").textContent = t("loc") + ` (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+}
 function locate() {
   $("loc").textContent = t("locating");
   navigator.geolocation?.getCurrentPosition(p => {
-    pos = { lat: p.coords.latitude, lng: p.coords.longitude };
-    $("loc").textContent = t("loc");
-    map.setView([pos.lat, pos.lng], 15);
-  }, () => { pos = null; $("loc").textContent = t("noloc"); }, { enableHighAccuracy: true, timeout: 10000 });
+    setPos(p.coords.latitude, p.coords.longitude);
+    pmap.setView([p.coords.latitude, p.coords.longitude], 16);
+  }, () => { $("loc").textContent = t("noloc"); }, { enableHighAccuracy: true, timeout: 10000 });
 }
-$("fab").onclick = () => { $("sheet").hidden = false; say(""); locate(); };
-$("cancel").onclick = () => $("sheet").hidden = true;
+pmap.on("click", e => setPos(e.latlng.lat, e.latlng.lng));
+
+$("photo").onchange = () => {
+  const f = $("photo").files[0];
+  $("thumb").hidden = !f; $("tool-photo").classList.toggle("on", !!f);
+  if (f) $("thumb").src = URL.createObjectURL(f);
+};
+$("tool-text").onclick = () => $("textin").focus();
 
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-$("mic").onclick = () => {
+$("tool-voice").onclick = () => {
   if (!SR) return say("nomic", true);
   const rec = new SR();
   rec.lang = { en: "en-US", es: "es-US", ht: "fr-HT" }[lang];
-  rec.onresult = e => { $("text").value = ($("text").value + " " + e.results[0][0].transcript).trim(); };
-  rec.start();
+  rec.onresult = e => { $("textin").value = ($("textin").value + " " + e.results[0][0].transcript).trim(); };
+  rec.onend = () => { $("tool-voice").classList.remove("on"); say(""); };
+  rec.start(); $("tool-voice").classList.add("on"); say("listening");
 };
 
 $("form").onsubmit = async e => {
   e.preventDefault();
-  const file = $("photo").files[0], text = $("text").value.trim();
+  const file = $("photo").files[0], text = $("textin").value.trim();
   if (!file && !text) return say("empty", true);
   if (!pos) { locate(); return say("noloc", true); }
   const fd = new FormData();
-  fd.append("lat", pos.lat); fd.append("lng", pos.lng);
+  fd.append("lat", pos.lat); fd.append("lng", pos.lng); fd.append("reporter_id", reporterId);
   if (file) fd.append("photo", file);
   if (text) fd.append("text", text);
   if ($("area").value.trim()) fd.append("area", $("area").value.trim());
@@ -218,9 +402,9 @@ $("form").onsubmit = async e => {
     const r = await fetch("/api/reports", { method: "POST", body: fd });
     if (!r.ok) return say({ 400: "e400", 413: "e413", 502: "e502" }[r.status] || "eNet", true);
     say("thanks");
-    $("form").reset();
-    setTimeout(() => $("sheet").hidden = true, 1200);
+    $("form").reset(); $("thumb").hidden = true; $("tool-photo").classList.remove("on");
     poll();
+    setTimeout(() => { say(""); show("overview"); }, 1500);
   } catch { say("eNet", true); }
   finally { $("send").disabled = false; }
 };
