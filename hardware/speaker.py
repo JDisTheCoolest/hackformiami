@@ -54,7 +54,13 @@ def siren():
 def say(text: str, lang: str):
     print(f"[{lang}] {text}")
     if shutil.which("espeak-ng"):
-        subprocess.run(["espeak-ng", "-v", VOICES.get(lang, lang), "-s", "150", "-a", "200", text])
+        wav = subprocess.run(["espeak-ng", "--stdout", "-v", VOICES.get(lang, lang), "-s", "150", text], capture_output=True)
+        if wav.returncode == 0 and shutil.which("aplay"):
+            playback = subprocess.run(["aplay", "-q", "-D", os.getenv("ALSA_DEVICE", "default")], input=wav.stdout, capture_output=True)
+            if playback.returncode:
+                print("AUDIO ERROR:", playback.stderr.decode(errors="replace")[:300], flush=True)
+        else:
+            print("TTS ERROR:", wav.stderr.decode(errors="replace")[:300], flush=True)
 
 
 def play(alert: dict):
@@ -87,7 +93,8 @@ def main():
         try:
             alert = requests.get(f"{SERVER_URL}/api/alerts/latest", timeout=5).json().get("alert")
             if time.time() - last_tide_check > 60:
-                tide_risk = requests.get(f"{SERVER_URL}/api/tide", timeout=10).json().get("risk") or "low"
+                try: tide_risk = requests.get(f"{SERVER_URL}/api/tide", timeout=5).json().get("risk") or "low"
+                except Exception as e: print("Tide request failed; alerts continue:",e,flush=True)
                 last_tide_check = time.time()
 
             if alert and alert["id"] != last_id:
@@ -110,4 +117,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    if "--test" in __import__("sys").argv:
+        play({"message":{"en":"Speaker test. Four Forces audio is working."}})
+    else:
+        main()
