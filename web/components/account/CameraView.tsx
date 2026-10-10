@@ -54,6 +54,19 @@ export function CameraView(){
     return()=>{stopped=true;window.clearInterval(interval);};
   },[sessionHeaders]);
 
+  useEffect(()=>{
+    let stopped=false;
+    const refresh=async()=>{
+      try{
+        const response=await fetch(`${API_BASE}/api/alerts`,{cache:"no-store"});
+        if(response.ok&&!stopped)setAlerts((await response.json() as AlertItem[]).slice(0,50));
+      }catch{/* Alerts are optional when backend is offline. */}
+    };
+    void refresh();
+    const timer=window.setInterval(()=>void refresh(),10000);
+    return()=>{stopped=true;window.clearInterval(timer);};
+  },[]);
+
   const requestLocation=()=>{if(!navigator.geolocation){setLocationStatus("This browser does not support location.");return;}navigator.geolocation.getCurrentPosition(p=>{setPosition({lat:p.coords.latitude,lng:p.coords.longitude});setLocationStatus("Showing alerts within 2 km. Your coordinates remain in this browser.");},()=>setLocationStatus("Location denied or unavailable; showing all alerts."),{timeout:12000,maximumAge:60000});};
   const shown=position?alerts.filter(a=>Number.isFinite(a.lat)&&Number.isFinite(a.lng)&&distanceKm(position.lat,position.lng,a.lat,a.lng)<=2):alerts;
   const fps=cameraStatus?.capture_fps??0;
