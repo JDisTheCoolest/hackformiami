@@ -18,8 +18,11 @@ after="$(git rev-parse refs/remotes/origin/main)"
 if [[ "$before" == "$after" ]]; then say "Up to date ($before)"; exit 0; fi
 if ! git merge-base --is-ancestor "$before" "$after"; then say "Skipped: diverged history"; exit 1; fi
 manager_changed=0
+site_changed=0
 if git diff --name-only "$before" "$after" -- manager/ | grep -q .; then manager_changed=1; fi
+if git diff --name-only "$before" "$after" -- backend/ web/ app/ | grep -q .; then site_changed=1; fi
 git merge --ff-only --quiet "$after"
 say "Updated $(git rev-parse --short HEAD)"
 # service is restarted by root-owned systemd post-job, only after successful update
 if [[ "$manager_changed" == 1 ]]; then touch "$status_dir/restart-required"; fi
+if [[ "$site_changed" == 1 ]]; then touch "$status_dir/site-update-required"; fi
