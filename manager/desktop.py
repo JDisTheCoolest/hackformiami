@@ -305,6 +305,7 @@ class Manager(tk.Tk):
         tk.Button(buttons,text="Detect approximate location",command=self.detect_camera_location,bg=PANEL2,fg=FG,padx=8).pack(side="left",padx=4)
         tk.Button(buttons,text="Save confirmed location",command=lambda:self.hardware_action("location",self.cam_lat.get(),self.cam_lng.get(),self.cam_area.get()),bg="#176657",fg=FG,padx=8).pack(side="left",padx=4)
         row=tk.Frame(frame,bg=PANEL);row.pack(anchor="w",pady=8)
+        tk.Button(row,text="Test speaker audio",command=lambda:self.hardware_action("speaker-test"),bg="#176657",fg=FG).pack(side="left",padx=4)
         tk.Button(row,text="Start speaker",command=lambda:self.hardware_action("speaker-start"),bg=PANEL2,fg=FG).pack(side="left",padx=4)
         tk.Button(row,text="Stop speaker",command=lambda:self.hardware_action("speaker-stop"),bg=PANEL2,fg=FG).pack(side="left",padx=4)
         tk.Label(frame,text="IP-based lookup is approximate and may be wrong. Confirm coordinates before saving. Physical fights are only tentative AI detections.",bg=PANEL,fg="#f1d395",wraplength=680,justify="left").pack(anchor="w",pady=8)
