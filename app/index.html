@@ -41,7 +41,7 @@
   #app { position: relative; height: 100%; max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; overflow: hidden;
     padding-top: env(safe-area-inset-top);
     background: linear-gradient(180deg, var(--trench) 0, var(--abyss) 260px); }   /* the one gradient */
-  header { display: flex; align-items: center; height: 52px; padding: 0 16px; }
+  header { display: flex; align-items: center; height: 44px; padding: 0 16px; }
   .wm { flex: 1; display: inline-flex; align-items: center; font-size: 1.3rem; color: var(--foam); }
   .wm > span { display: inline-flex; align-items: baseline; font-weight: 600; letter-spacing: -.045em; line-height: 1; }
   .eye { width: .74em; height: .74em; margin: 0 .02em; transform: translateY(.03em); align-self: baseline; overflow: visible; }
@@ -51,32 +51,34 @@
     color: var(--foam); display: grid; place-items: center; cursor: pointer; padding: 0; }
   .ib svg, .tab svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
   #belldot { position: absolute; top: 8px; right: 9px; width: 8px; height: 8px; border-radius: 50%; background: var(--sev-severe); }
-  #sub { display: flex; align-items: baseline; justify-content: space-between; padding: 0 16px 12px; gap: 8px; font-size: .8125rem; color: var(--mist); }
+  #sub { display: flex; align-items: baseline; justify-content: space-between; padding: 0 16px 6px; gap: 8px; font-size: .8125rem; color: var(--mist); }
   #sub p { margin: 0; }
   #live { font-size: .75rem; color: var(--dim); font-variant-numeric: tabular-nums; }
   #live.off { color: var(--sev-moderate); }
 
   main { position: relative; flex: 1; min-height: 0; }
-  .screen { position: absolute; inset: 0; overflow-y: auto; padding: 0 16px 16px; display: none; flex-direction: column; gap: 12px; }
+  .screen { position: absolute; inset: 0; overflow-y: auto; padding: 0 16px 16px; display: none; flex-direction: column; gap: 10px; }
   .screen.on { display: flex; }
   #s-map { padding: 0; }
   h2 { margin: 4px 0 0; font-size: 1.5rem; font-weight: 600; letter-spacing: -.03em; }
   .card, .tidecard, #status, .arow { border: 1px solid var(--line); border-radius: 14px; background: var(--deep); padding: 16px; }
 
   /* tide */
-  .tidecard { --rc: var(--sev-moderate); border: 0; background: none; padding: 4px 0 0; border-radius: 0; }
+  .tidecard { --rc: var(--sev-moderate); border: 0; background: none; padding: 0; border-radius: 0; }
   .tidecard .top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
-  .tidecard .big { margin: 6px 0 0; font-size: 2.5rem; font-weight: 600; letter-spacing: -.04em; line-height: 1; color: var(--rc); }
-  .tidecard svg.curve { display: block; width: 100%; height: 64px; margin-top: 12px; overflow: visible; }
+  .tidecard .big { margin: 2px 0 0; font-size: 1.9rem; font-weight: 600; letter-spacing: -.04em; line-height: 1; color: var(--rc); }
+  .tidecard svg.curve { display: block; width: 100%; height: 52px; margin-top: 8px; overflow: visible; }
   .tidecard .foot { display: flex; justify-content: space-between; margin-top: 6px; font-size: .75rem; color: var(--mist); font-variant-numeric: tabular-nums; }
 
   /* map card / full map */
   #mapslot { position: relative; height: 230px; flex: none; transition: height .3s var(--ease); border-radius: 14px; overflow: hidden; border: 1px solid var(--line); }
   #mapslot.big { height: min(64vh, 560px); }
   #s-map .mapwrap { border-radius: 0; }
-  #mexp { position: absolute; top: 8px; right: 8px; z-index: 800; width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--line);
-    background: var(--deep); color: var(--foam); display: grid; place-items: center; padding: 0; cursor: pointer; }
-  #mexp svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+  .mctl { position: absolute; top: 8px; right: 8px; z-index: 800; display: flex; flex-direction: column; gap: 6px; }
+  .mctl button { width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--line); background: var(--deep); color: var(--foam);
+    display: grid; place-items: center; padding: 0; cursor: pointer; }
+  .mapwrap { overscroll-behavior: contain; touch-action: none; }   /* wheel / pinch / drag belong to the map, not the page */
+  .mctl svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
   #mexp .in, #mapslot.big #mexp .out { display: none; }
   #mapslot.big #mexp .in { display: block; }
   #s-map #mexp { display: none; }
@@ -193,8 +195,6 @@
   #box.rec #attach { visibility: hidden; }
   #hint { margin: 8px 0 0; text-align: center; font-size: .75rem; line-height: 1.25; color: var(--dim); }
   /* 3D water-level overlay */
-  .p3d { display: block; margin-top: 8px; height: 32px; padding: 0 12px; border: 1px solid rgb(238 244 255 / .25); border-radius: 8px;
-    background: transparent; color: var(--foam); font-size: .8125rem; font-weight: 500; cursor: pointer; }
   #v3 { position: fixed; inset: 0; z-index: 3000; display: flex; flex-direction: column; background: var(--abyss); animation: fade .3s var(--ease) both; }
   #v3x { position: absolute; top: calc(12px + env(safe-area-inset-top)); right: 12px; z-index: 2; width: 40px; height: 40px; border-radius: 50%;
     border: 1px solid var(--line); background: var(--deep); color: var(--foam); font-size: 22px; line-height: 1; cursor: pointer; }
@@ -224,7 +224,7 @@
   <main>
     <section id="s-home" class="screen on">
       <div id="tide" class="tidecard" hidden></div>
-      <div id="mapslot"><div class="mapwrap" id="mapwrap"><button type="button" id="mexp" aria-label="Resize map"><svg class="out" viewBox="0 0 24 24"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg><svg class="in" viewBox="0 0 24 24"><path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7"/></svg></button><div id="cmap"></div><div id="map"></div><div id="wcard" hidden><div class="txt"><p class="big" id="wbig"></p><p class="sub" id="wcars"></p><p class="src" id="wcap"></p></div><button type="button" id="wx" aria-label="Close">×</button></div></div></div>
+      <div id="mapslot"><div class="mapwrap" id="mapwrap"><div class="mctl"><button type="button" id="mzi" aria-label="Zoom in"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button><button type="button" id="mzo" aria-label="Zoom out"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button><button type="button" id="mexp" aria-label="Resize map"><svg class="out" viewBox="0 0 24 24"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg><svg class="in" viewBox="0 0 24 24"><path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7"/></svg></button></div><div id="cmap"></div><div id="map"></div><div id="wcard" hidden><div class="txt"><p class="big" id="wbig"></p><p class="sub" id="wcars"></p><p class="src" id="wcap"></p></div><button type="button" id="wx" aria-label="Close">×</button></div></div></div>
       <div id="rcount"></div>
       <div id="status" class="ok">
         <div class="txt"><p class="lbl" id="slbl"></p><h1></h1><p class="sub"></p><p class="src" id="ssrc"></p></div>
@@ -347,7 +347,7 @@ let reporterId = localStorage.reporter_id;
 if (!reporterId) { reporterId = "w_" + Math.random().toString(36).slice(2, 10); localStorage.reporter_id = reporterId; }
 
 // --- map ---
-const map = L.map("map", { zoomControl: false }).setView([25.7617, -80.1918], 12);
+const map = L.map("map", { zoomControl: false, zoomSnap: 0, zoomDelta: .5, wheelPxPerZoomLevel: 110, wheelDebounceTime: 20 }).setView([25.7617, -80.1918], 12);
 const ESRI = "https://server.arcgisonline.com/ArcGIS/rest/services/";
 const esri = [  // satellite imagery + street and place names on top
   L.tileLayer(ESRI + "World_Imagery/MapServer/tile/{z}/{y}/{x}", { maxNativeZoom: 19, maxZoom: 19, attribution: "Esri, Maxar, Earthstar Geographics" }),
@@ -368,6 +368,7 @@ const isAnalyzing = r => r.status === "analyzing" || !r.analysis;
 const pinIcon = (color, cls) => L.divIcon({ className: "", iconSize: [20, 20], html: `<div class="pin ${cls}" style="--c:${color}"><b></b></div>` });
 const dotIcon = cls => L.divIcon({ className: "", iconSize: [18, 18], html: `<div class="${cls}"></div>` });
 
+const hasDepth = r => !isAnalyzing(r) && r.analysis.type === "flood" && r.analysis.depth_in != null;
 function popup(r) {
   if (isAnalyzing(r)) return `<b>${t("analyzing")}</b>`;
   const a = r.analysis;
@@ -377,7 +378,6 @@ function popup(r) {
   if (a.type === "flood" && a.depth_in != null) h += ` · ${t("about")} ${esc(a.depth_in)} ${t("in")}`;
   if (a.type === "flood" && a.car_passable != null) h += `<br>${a.car_passable ? t("cars") : t("nocars")}`;
   if (a.needs_confirmation) h += `<br><span style="color:var(--dim)">${t("unconfirmed")}</span>`;
-  if (a.type === "flood" && a.depth_in != null) h += `<button type="button" class="p3d" data-id="${esc(r.id)}">${t("view3d")}</button>`;
   return h;
 }
 
@@ -389,8 +389,14 @@ function drawReports() {
     const a = r.analysis;
     const icon = an ? pinIcon(css("--dim"), "an")
       : pinIcon(sevColor(a.severity), (a.needs_confirmation ? "unc " : "") + (a.severity === "severe" ? "ring" : ""));
-    const m = markers[r.id] || (markers[r.id] = L.marker([r.lat, r.lng], { icon }).addTo(map).bindPopup(""));
-    m.setIcon(icon); m.setPopupContent(popup(r));
+    let m = markers[r.id];
+    if (!m) {
+      m = markers[r.id] = L.marker([r.lat, r.lng], { icon }).addTo(map);
+      m.on("click", () => { const x = reports.find(q => q.id === r.id); if (x && hasDepth(x)) open3D(x); });
+    }
+    m.setIcon(icon);
+    if (hasDepth(r)) { if (m.getPopup()) m.unbindPopup(); }   // flood with a depth: the tap opens the 3D water view instead
+    else { if (!m.getPopup()) m.bindPopup(""); m.setPopupContent(popup(r)); }
   }
   for (const id in markers) if (!seen.has(id)) { map.removeLayer(markers[id]); delete markers[id]; }
   czDraw();
@@ -682,11 +688,6 @@ const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
 })();
 
 // --- 3D water-level overlay (three.js loads lazily, only when first opened) ---
-// capture phase: Leaflet stops clicks inside popups, and polling re-renders popup content every 5 s
-document.addEventListener("click", e => {
-  const b = e.target.closest?.(".p3d");
-  if (b) open3D(reports.find(x => x.id === b.dataset.id));
-}, true);
 let three = null, view = null;
 const webgl = () => { try { const c = document.createElement("canvas"); return !!(c.getContext("webgl2") || c.getContext("webgl")); } catch { return false; } };
 async function loadThree() {
@@ -869,30 +870,50 @@ async function czSelect(r) {
     if (pt && Number.isFinite(pt.height)) gh = pt.height;
   } catch {}
   viewer.camera.flyToBoundingSphere(new C.BoundingSphere(C.Cartesian3.fromDegrees(r.lng, r.lat, gh), 1),
-    { offset: new C.HeadingPitchRange(viewer.camera.heading, C.Math.toRadians(-35), 60), duration: 2.2 });
+    { offset: new C.HeadingPitchRange(viewer.camera.heading, C.Math.toRadians(-30), 42), duration: 2.2 });
   const target = depth * .0254, t0 = performance.now(); let k = 0;
-  cz.water = viewer.entities.add({ position: C.Cartesian3.fromDegrees(r.lng, r.lat, gh),
-    ellipse: { semiMajorAxis: 35, semiMinorAxis: 35, height: new C.CallbackProperty(() => gh + .02 + target * k, false),
-      material: C.Color.fromCssColorString("#2a7de1").withAlpha(.55) } });
+  const at = h => C.Cartesian3.fromDegrees(r.lng, r.lat, h);
+  const top = new C.CallbackProperty(() => gh + .03 + target * k, false);
+  // a water body with real sides (ground -> surface), a 5.5 ft person for scale and a floating level label
+  cz.extra = [
+    viewer.entities.add({ position: at(gh), ellipse: { semiMajorAxis: 22, semiMinorAxis: 22, height: gh, extrudedHeight: top,
+      material: C.Color.fromCssColorString("#2a8cff").withAlpha(.5), outline: true, outlineColor: C.Color.fromCssColorString("#9fd0ff").withAlpha(.9) } }),
+    viewer.entities.add({ position: at(gh + .84), cylinder: { length: 1.68, topRadius: .2, bottomRadius: .2, material: C.Color.fromCssColorString("#eef4ff") } }),
+    viewer.entities.add({ position: new C.CallbackProperty(() => at(gh + .03 + target * k + 1.2), false),
+      label: { text: `≈ ${depth} ${t("in")}`, font: "600 20px 'Inter Tight', sans-serif", fillColor: C.Color.WHITE, showBackground: true,
+        backgroundColor: C.Color.fromCssColorString("#06152f").withAlpha(.85), backgroundPadding: new C.Cartesian2(10, 6),
+        disableDepthTestDistance: Infinity, pixelOffset: new C.Cartesian2(0, -4) } }),
+  ];
+  cz.water = cz.extra[0];
   (function rise(now) {
     if (!cz || !cz.water) return;
-    k = 1 - Math.pow(1 - Math.min(1, (now - t0) / 2000), 3);
+    k = 1 - Math.pow(1 - Math.min(1, (now - t0) / 2200), 3);
     viewer.scene.requestRender();
     if (k < 1) requestAnimationFrame(rise);
   })(t0);
   $("wbig").textContent = `≈ ${depth} ${t("in")} ${t("ofwater")}`;
-  $("wcars").textContent = a.car_passable == null ? "" : a.car_passable ? t("cars") : t("nocars");
+  $("wcars").textContent = [t("lvls")[levelOf(depth)], a.car_passable == null ? "" : a.car_passable ? t("cars") : t("nocars")].filter(Boolean).join(" · ");
   $("wcap").textContent = t("wcap");
   $("wcard").hidden = false;
 }
 function czClear(flyBack) {
   if (!cz) return;
-  if (cz.water) { cz.viewer.entities.remove(cz.water); cz.water = null; }
+  if (cz.extra) { cz.extra.forEach(e => cz.viewer.entities.remove(e)); cz.extra = null; cz.water = null; }
   $("wcard").hidden = true;
   if (flyBack && cz.prev) cz.viewer.camera.flyTo({ destination: cz.prev.position, orientation: { heading: cz.prev.heading, pitch: cz.prev.pitch, roll: cz.prev.roll }, duration: 1.5 });
   cz.viewer.scene.requestRender();
 }
 $("wx").onclick = () => czClear(true);
+function zoomBy(f) {   // f > 1 zooms in
+  if (cz && cz.live) {
+    const cam = cz.viewer.camera, h = Math.max(20, cam.positionCartographic.height - GEOID - 2);
+    cam.moveForward(h * (1 - 1 / f)); cz.viewer.scene.requestRender();
+  } else map.setZoom(map.getZoom() + Math.log2(f));
+}
+$("mzi").onclick = () => zoomBy(1.7); $("mzo").onclick = () => zoomBy(1 / 1.7);
+let gLast = 1;   // Safari reports trackpad pinch as gesture events, not wheel events
+$("mapwrap").addEventListener("gesturestart", e => { e.preventDefault(); gLast = 1; });
+$("mapwrap").addEventListener("gesturechange", e => { e.preventDefault(); zoomBy(e.scale / gLast); gLast = e.scale; });
 $("mexp").onclick = () => {   // card <-> tall map; then let both map engines pick up the new size
   $("mapslot").classList.toggle("big");
   const fit = () => { map.invalidateSize(); if (cz) { cz.viewer.resize(); cz.viewer.scene.requestRender(); } };
@@ -917,6 +938,10 @@ async function startCesium() {
     viewer = new C.Viewer("cmap", { globe: false, baseLayer: false, requestRenderMode: true, maximumRenderTimeChange: Infinity,
       timeline: false, animation: false, geocoder: false, baseLayerPicker: false, homeButton: false, sceneModePicker: false,
       navigationHelpButton: false, fullscreenButton: false, vrButton: false, infoBox: false, selectionIndicator: false, shouldAnimate: false });
+    const ctl = viewer.scene.screenSpaceCameraController, CE = C.CameraEventType, KM = C.KeyboardEventModifier;   // trackpad: two-finger scroll or pinch zooms, drag pans, Alt/Ctrl+drag tilts
+    ctl.zoomEventTypes = [CE.WHEEL, CE.PINCH, { eventType: CE.WHEEL, modifier: KM.CTRL }, { eventType: CE.WHEEL, modifier: KM.META }];
+    ctl.tiltEventTypes = [CE.MIDDLE_DRAG, CE.PINCH, { eventType: CE.LEFT_DRAG, modifier: KM.CTRL }, { eventType: CE.LEFT_DRAG, modifier: KM.ALT }, { eventType: CE.RIGHT_DRAG, modifier: KM.CTRL }];
+    ctl.zoomFactor = 3; ctl.minimumZoomDistance = 12; ctl.maximumZoomDistance = 8000; ctl.inertiaZoom = .7;
     viewer.scene.skyBox.show = false; viewer.scene.backgroundColor = C.Color.fromCssColorString("#030814");
     viewer.resolutionScale = Math.min(devicePixelRatio || 1, 2);
     const tiles = await C.createGooglePhotorealistic3DTileset();
