@@ -19,6 +19,7 @@ Camera backends tried in order (set CAPTURE=... to force one):
 Demo tip: point the camera at a laptop/phone screen showing a flooded street.
 """
 import hashlib
+import urllib.parse
 import os
 import shutil
 import subprocess
@@ -83,6 +84,20 @@ def send(path: Path) -> None:
     if resp.status_code != 200:
         print(f"server answered {resp.status_code}: {resp.text[:200]}")
         return
+    # Local, authenticated camera classification for possible physical fights.
+    token = os.getenv("ADMIN_TOKEN", "")
+    if token:
+        with path.open("rb") as frame:
+            try:
+                f = requests.post(f"{SERVER_URL}/api/camera/fight",
+                    files={"photo": (path.name, frame, "image/jpeg")},
+                    headers={"X-Admin-Token": token}, timeout=60)
+                if f.ok and f.json().get("announced"):
+                    print("Possible fight alert queued for speaker")
+                elif not f.ok:
+                    print("Fight classifier returned", f.status_code)
+            except requests.RequestException as exc:
+                print("Fight classifier unavailable:", exc)
     body = resp.json()
     print("Submitted camera report:", body.get("report", {}).get("id"), "- AI analysis queued")
 
