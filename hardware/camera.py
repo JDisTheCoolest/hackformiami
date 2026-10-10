@@ -314,7 +314,8 @@ def main():
             payload = {"updated_at": time.time(), "people": observation["people"],
                        "candidates": observation["candidates"],
                        "frames_in_memory": observation["frames_in_memory"],
-                       "tracking_mode": "mobilenet_ssd_person_only_v2",
+                       "tracking_mode": observation.get("model", "unavailable"),
+                       "model": observation.get("model", "unavailable"),
                        "fight_confirmed": False}
             dest = Path("/var/lib/hackformiami-hardware/tracking.json")
             temp = dest.with_suffix(".tmp")
