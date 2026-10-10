@@ -70,7 +70,7 @@ class Manager(tk.Tk):
         side.pack_propagate(False)
         tk.Label(side, text="⚡ HACK FOR MIAMI", bg="#0e1c2d", fg=ACCENT, font=("DejaVu Sans", 15, "bold")).pack(anchor="w", padx=20, pady=(27, 4))
         tk.Label(side, text="PRIVATE PI DESKTOP MANAGER", bg="#0e1c2d", fg=MUTED, font=("DejaVu Sans", 9)).pack(anchor="w", padx=20, pady=(0, 27))
-        for name in ("Dashboard", "Events", "Content & Media", "Registrations", "Deployment", "Cloudflare", "Backups", "Settings"):
+        for name in ("Dashboard", "Website & AI", "Events", "Content & Media", "Registrations", "Deployment", "Cloudflare", "Backups", "Settings"):
             tk.Button(side, text="  "+name, anchor="w", bg="#0e1c2d", fg=FG, activebackground="#22463f", activeforeground=FG,
                       relief="flat", bd=0, padx=13, pady=14, font=("DejaVu Sans", 11),
                       command=lambda n=name:self.show(n)).pack(fill="x", padx=9, pady=1)
@@ -96,6 +96,8 @@ class Manager(tk.Tk):
             self.data.pack(fill="both",expand=True)
             self.render_data()
             tk.Button(self.content,text="Refresh now",command=self.render_data,bg="#176657",fg=FG,relief="flat",padx=20,pady=12).pack(anchor="w",pady=15)
+        elif name == "Website & AI":
+            self.site_screen()
         elif name == "Deployment":
             self.heading("GitHub deployment","Automatic 30-second GitHub checks")
             self.data = tk.Frame(self.content,bg=BG)
@@ -110,6 +112,45 @@ class Manager(tk.Tk):
             panel.pack(fill="x")
             tk.Label(panel,text=name+" is ready for future integration.",bg=PANEL,fg=FG,font=("DejaVu Sans",15,"bold")).pack(anchor="w")
             tk.Label(panel,text="This manager does not invent a backend or modify the HackForMiami website. This section will connect when the corresponding application module exists.",bg=PANEL,fg=MUTED,wraplength=600,justify="left").pack(anchor="w",pady=(12,0))
+
+    def site_screen(self):
+        self.heading("Website & AI", "Run the Vite website, FastAPI endpoints and Gemma analysis on this Pi")
+        area=tk.Frame(self.content,bg=PANEL,padx=24,pady=22)
+        area.pack(fill="both",expand=True)
+        self.site_status=tk.StringVar(value="Checking backend and model configuration...")
+        tk.Label(area,textvariable=self.site_status,bg=PANEL,fg=ACCENT,font=("DejaVu Sans",11),wraplength=630,justify="left").pack(anchor="w",pady=9)
+        tk.Label(area,text="Local service: http://127.0.0.1:8000  ·  Public Cloudflare route should point here.",bg=PANEL,fg=MUTED,wraplength=620,justify="left").pack(anchor="w",pady=8)
+        tk.Button(area,text="Install / update website and API",bg="#176657",fg=FG,relief="flat",padx=13,pady=11,command=self.install_site).pack(anchor="w",pady=10)
+        tk.Button(area,text="Check service and AI mode",bg=PANEL2,fg=FG,relief="flat",padx=13,pady=10,command=self.check_site).pack(anchor="w",pady=7)
+        tk.Label(area,text="AI configuration: the backend uses GEMINI_API_KEY from /etc/hackformiami/backend.env. With no key, it explicitly runs in MOCK mode (sample results).",bg=PANEL,fg=MUTED,wraplength=650,justify="left").pack(anchor="w",pady=12)
+        tk.Label(area,text="To set the AI key securely, use the Pi terminal: sudoedit /etc/hackformiami/backend.env\nThen: sudo systemctl restart hackformiami-site",bg=PANEL,fg="#f1d395",wraplength=650,justify="left").pack(anchor="w",pady=12)
+        tk.Label(area,text="The current app/ directory contains no functional reporting frontend yet, so /app/ may still be unavailable even when the landing page and API work.",bg=PANEL,fg=MUTED,wraplength=650,justify="left").pack(anchor="w")
+        self.check_site()
+
+    def check_site(self):
+        def worker():
+            status=cmd("systemctl","is-active","hackformiami-site")
+            try:
+                from urllib.request import urlopen
+                with urlopen("http://127.0.0.1:8000/api/health",timeout=4) as resp:
+                    import json
+                    d=json.load(resp)
+                output=f"Website/API service: {status} | API: healthy | AI mode: {'MOCK (no key)' if d.get('mock') else 'Configured ('+str(d.get('model'))+')'}"
+            except Exception as e:
+                output=f"Website/API service: {status} | API unreachable: {str(e)[:100]}"
+            self.after(0,lambda:self.site_status.set(output) if self.selected.get()=="Website & AI" else None)
+        threading.Thread(target=worker,daemon=True).start()
+
+    def install_site(self):
+        if not messagebox.askyesno("Install website","Build React site, install Python dependencies and configure a local FastAPI system service? Admin authorization is required."):return
+        self.site_status.set("Installing dependencies and building website...")
+        def worker():
+            try:
+                p=subprocess.run(["pkexec","/usr/local/sbin/hackformiami-site-install"],capture_output=True,text=True,timeout=720)
+                result="Website/API installed; check health." if p.returncode==0 else "Install error: "+(p.stderr or p.stdout)[-400:]
+            except (OSError,subprocess.TimeoutExpired) as e:result=str(e)
+            self.after(0,lambda:(self.site_status.set(result),self.check_site()))
+        threading.Thread(target=worker,daemon=True).start()
 
     def cloudflare_screen(self):
         self.heading("Cloudflare Tunnel", "Connect your public HackForMiami site to a Cloudflare-managed hostname")
