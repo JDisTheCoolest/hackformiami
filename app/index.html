@@ -15,135 +15,156 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
-  /* tokens copied from web/src/styles/globals.css */
+  /* tokens + utilities ported from web/src/styles/globals.css */
   :root {
     --abyss: #030814; --deep: #06152f; --trench: #0a1f45;
     --electric: #2868ff; --cyan: #65d9f2; --foam: #eef4ff; --mist: #a9b8d3; --dim: #7f8ca8;
     --line: rgb(169 184 211 / .14);
+    --air: #cfdcf2; --land: #9db48a; --stone: #c4b89b; --fire: #ff8a3d; --ember: #ffc061; --flare: #e8513a;
     --sev-none: #4cc38a; --sev-low: #f2d14b; --sev-moderate: #ff9b3d; --sev-severe: #ff4d4d;
     --ease: cubic-bezier(.16, 1, .3, 1);
+    --ease-in-out-quint: cubic-bezier(.83, 0, .17, 1);
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { height: 100%; margin: 0; background: var(--abyss); color: var(--foam);
-    font: 15px/1.4 "Inter Tight", ui-sans-serif, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  html { background: var(--abyss); color: var(--foam); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+  html, body { height: 100%; margin: 0; }
+  body { background: var(--abyss); overflow-x: clip; font: 16px/1.5 "Inter Tight", ui-sans-serif, system-ui, sans-serif; }
+  ::selection { background: rgb(101 217 242 / .35); color: #fff; }
   button, input, textarea, select { font: inherit; color: inherit; }
   [hidden] { display: none !important; }
   :focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; border-radius: 4px; }
+  .label-sm { font-size: .8125rem; line-height: 1.25rem; font-weight: 500; letter-spacing: -.005em; font-variant-numeric: tabular-nums; }
+  .hairline { border-color: var(--line); }
+  .reveal { opacity: 0; transform: translateY(18px); transition: opacity .9s var(--ease), transform .9s var(--ease); }
+  .reveal.is-in { opacity: 1; transform: none; }
+  @keyframes pulse-ring { 0% { transform: scale(.6); opacity: .7; } 100% { transform: scale(2.4); opacity: 0; } }
+  @keyframes scan { 0% { transform: translateY(-10%); opacity: 0; } 10%, 90% { opacity: 1; } 100% { transform: translateY(110%); opacity: 0; } }
+  @keyframes drift { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+  @keyframes sweep { from { transform: translateX(-100%); } to { transform: translateX(400%); } }
+  @keyframes stage-in { from { opacity: 0; clip-path: circle(12% at 50% 60%); filter: blur(6px); } to { opacity: 1; clip-path: circle(120% at 50% 60%); filter: blur(0); } }
+  @keyframes pulse { 50% { opacity: .4; } }
+  @keyframes spin { to { transform: rotate(360deg); } }
 
-  #app { height: 100%; max-width: 480px; margin: 0 auto; display: flex; flex-direction: column;
-    padding-top: env(safe-area-inset-top); position: relative;
-    background: radial-gradient(70% 38% at 85% 0%, rgb(40 104 255 / .28), transparent 70%),
-      radial-gradient(60% 30% at 0% 22%, rgb(101 217 242 / .12), transparent 70%),
-      linear-gradient(180deg, var(--trench) 0%, var(--abyss) 50%); }
-  header { display: flex; align-items: center; padding: 10px 16px 0; }
-  .brand { flex: 1; font-size: 15px; font-weight: 600; letter-spacing: -.045em; display: flex; align-items: baseline; margin: 0; }
-  .brand svg { width: .72em; height: .72em; margin: 0 .5px; overflow: visible; }
-  .eyes { transform-box: fill-box; transform-origin: center; animation: blink 5s infinite; }
-  @keyframes blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(.1); } }
-  #lang { background: none; border: 1px solid var(--line); border-radius: 6px; padding: 1px 2px; font-size: 11px; color: var(--mist); }
+  #app { height: 100%; max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; background: var(--abyss); }
+
+  /* hero band: brand, orb background, status */
+  #hero { position: relative; isolation: isolate; overflow: hidden; padding-top: env(safe-area-inset-top);
+    background: radial-gradient(120% 80% at 70% 0%, #0b2266 0%, var(--deep) 45%, var(--abyss) 100%); }
+  #orb { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; }
+  .veil { position: absolute; inset: 0; z-index: 1; pointer-events: none;
+    background: linear-gradient(90deg, rgb(3 8 20 / .86) 0%, rgb(3 8 20 / .5) 42%, rgb(3 8 20 / .05) 72%); }
+  header { position: relative; z-index: 2; display: flex; align-items: center; height: 56px; padding: 0 16px; }
+  .wm { flex: 1; display: inline-flex; align-items: center; font-size: 1.5rem; color: var(--foam); }
+  .wm > span { display: inline-flex; align-items: baseline; font-weight: 600; letter-spacing: -.045em; line-height: 1; }
+  .eye { width: .74em; height: .74em; margin: 0 .02em; transform: translateY(.03em); align-self: baseline; overflow: visible; }
+  #eyes { transform-origin: 50px 50px; transition: transform .16s var(--ease); }
+  #eyes ellipse { transition: all .22s; }
+  #lang { height: 32px; padding: 0 6px; border-radius: 10px; border: 1px solid rgb(238 244 255 / .15); background: rgb(3 8 20 / .5);
+    font-size: 12px; color: var(--foam); cursor: pointer; }
   #lang option { background: var(--deep); }
 
-  #status { margin: 12px 16px; padding: 14px 18px; border: 1px solid var(--line); border-radius: 20px 20px 20px 6px;
-    background: rgb(238 244 255 / .05); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
-    transition: box-shadow .6s, border-color .6s; }
-  #status.pop { animation: pop .6s var(--ease); }
-  @keyframes pop { from { opacity: 0; transform: translateY(10px) scale(.97); } to { opacity: 1; transform: none; } }
-  #status h1 { margin: 0; font-size: 34px; font-weight: 600; letter-spacing: -.035em; line-height: 1.05; }
-  #status p { margin: 6px 0 0; color: var(--mist); font-size: 14px; }
-  #status.alert { border-color: rgb(255 77 77 / .45); box-shadow: 0 0 40px rgb(255 77 77 / .22); }
+  #status { position: relative; z-index: 2; margin: 4px 16px 16px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 16px;
+    background: rgb(6 21 47 / .5); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
+    transition: border-color .5s, background-color .5s; }
+  #status.pop { animation: stage-in .7s var(--ease) both; }
+  #status h1 { margin: 0; font-size: clamp(1.9rem, 9vw, 2.6rem); font-weight: 600; line-height: .95; letter-spacing: -.045em; text-wrap: balance; }
+  #status p { margin: 10px 0 0; color: var(--mist); font-size: 1rem; line-height: 1.5; }
+  #status.alert { border-color: rgb(255 77 77 / .3); background: rgb(255 77 77 / .08); }
   #status.alert h1 { color: var(--sev-severe); }
-  #status.maybe { border-color: rgb(255 155 61 / .4); box-shadow: 0 0 36px rgb(255 155 61 / .16); }
+  #status.maybe { border-color: rgb(255 155 61 / .3); background: rgb(255 155 61 / .08); }
   #status.maybe h1 { color: var(--sev-moderate); }
-  #status.ok { box-shadow: 0 0 30px rgb(76 195 138 / .1); }
+  #status.ok { border-color: rgb(101 217 242 / .2); background: rgb(101 217 242 / .06); }
   #status.ok h1 { color: var(--sev-none); }
 
+  /* map */
   .mapwrap { position: relative; flex: 1; min-height: 0; border-top: 1px solid var(--line); }
   #map { position: absolute; inset: 0; background: var(--abyss); }
-  /* bluer, darker basemap to match the site */
   .leaflet-tile-pane { filter: brightness(.8) sepia(1) hue-rotate(185deg) saturate(1.7); }
-  #chat { position: absolute; left: 12px; right: 12px; bottom: 10px; z-index: 600; display: flex; flex-direction: column;
-    gap: 6px; pointer-events: none; }
-  .bub { align-self: flex-start; max-width: 92%; pointer-events: auto; font-size: 14px; padding: 10px 14px;
-    border: 1px solid var(--line); border-radius: 18px 18px 18px 4px; background: rgb(6 21 47 / .78);
-    -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); animation: pop .5s var(--ease); }
-  .bub.err { color: var(--sev-severe); border-color: rgb(255 77 77 / .4); }
-  .bub b { display: block; }
-  .bub span.sub { color: var(--mist); display: block; margin-top: 2px; }
-
-  #dock { padding: 10px 12px calc(8px + env(safe-area-inset-bottom)); }
-  #box { background: var(--deep); border: 1px solid var(--line); border-radius: 24px; padding: 8px;
-    box-shadow: 0 8px 30px rgb(0 0 0 / .35); transition: border-color .3s; }
-  #box.rec { border-color: rgb(255 77 77 / .7); }
-  #thumbwrap { padding-bottom: 6px; }
-  .th { position: relative; width: 64px; height: 64px; border-radius: 14px; overflow: hidden; }
-  .th img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  #rm { position: absolute; top: 3px; right: 3px; width: 20px; height: 20px; padding: 0; border: 0; border-radius: 50%;
-    background: rgb(0 0 0 / .7); color: #fff; display: grid; place-items: center; cursor: pointer; }
-  #rm svg { width: 12px; height: 12px; }
-  #textin { display: block; width: 100%; min-height: 44px; max-height: 160px; resize: none; border: 0; background: transparent;
-    padding: 10px 12px; color: var(--foam); font-size: 16px; }
-  #textin:focus-visible { outline: none; }
-  #textin::-webkit-scrollbar { width: 6px; }
-  #textin::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
-  ::placeholder { color: var(--dim); }
-  #recui { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 10px 0 4px; }
-  #timer { display: flex; align-items: center; gap: 8px; font: 14px ui-monospace, monospace; color: rgb(255 255 255 / .8); }
-  #timer i { width: 8px; height: 8px; border-radius: 50%; background: var(--sev-severe); animation: pulse 1s infinite; }
-  #bars { display: flex; align-items: center; justify-content: center; gap: 2px; height: 36px; }
-  #bars i { width: 2px; border-radius: 2px; background: rgb(255 255 255 / .5); animation: pulse 1s ease-in-out infinite; }
-  .actions { display: flex; align-items: center; justify-content: space-between; padding-top: 4px; }
-  .rb { width: 32px; height: 32px; border-radius: 50%; border: 0; padding: 0; display: grid; place-items: center; cursor: pointer;
-    background: transparent; color: #9ca3af; transition: background .2s, color .2s; }
-  .rb:hover { background: rgb(75 85 99 / .3); color: #d1d5db; }
-  .rb svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-  #main[data-s=send] { background: #fff; color: var(--deep); }
-  #main[data-s=send]:hover { background: rgb(255 255 255 / .8); }
-  #main[data-s=send] svg { width: 16px; height: 16px; }
-  #main[data-s=rec] { color: var(--sev-severe); }
-  #main[data-s=sending] { background: #fff; color: var(--deep); cursor: default; }
-  #main[data-s=sending] svg { width: 14px; height: 14px; fill: currentColor; stroke: none; animation: pulse 1s infinite; }
-  #box.rec #attach { visibility: hidden; }
-  .spin { display: inline-block; width: 13px; height: 13px; border: 2px solid var(--cyan); border-right-color: transparent;
-    border-radius: 50%; animation: spin 1s linear infinite; vertical-align: -2px; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  #hint { margin: 6px 0 0; text-align: center; font-size: 11px; color: var(--dim); }
-
-  .pin { position: relative; width: 18px; height: 18px; border-radius: 50%; background: var(--c); border: 2px solid var(--abyss);
-    box-shadow: 0 0 0 5px color-mix(in srgb, var(--c) 22%, transparent), 0 0 16px var(--c); }
-  .pin.unc { border: 2px dashed var(--abyss); }
-  .pin.ring::after { content: ""; position: absolute; inset: -7px; border-radius: 50%; border: 1.5px solid var(--c);
-    animation: ring 2.4s ease-out infinite; }
-  @keyframes ring { from { transform: scale(.6); opacity: .8; } to { transform: scale(2.2); opacity: 0; } }
-  .pin.an { animation: pulse 1.4s ease-in-out infinite; box-shadow: 0 0 0 5px rgb(127 140 168 / .2), 0 0 12px var(--c); }
-  @keyframes pulse { 50% { opacity: .4; } }
   .osm-dark { filter: invert(1) hue-rotate(180deg) brightness(.85) contrast(.9); }
-  .me { width: 16px; height: 16px; border-radius: 50%; background: var(--electric); border: 3px solid #fff; box-shadow: 0 0 0 6px rgb(40 104 255 / .3); }
-  .pick { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--cyan); background: rgb(101 217 242 / .3); }
-  .leaflet-popup-content-wrapper, .leaflet-popup-tip { background: rgb(6 21 47 / .85); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+
+  /* report pins, same recipe as MiamiMap.tsx: soft halo + core with dark stroke (dashed = unconfirmed) */
+  .pin { position: relative; width: 20px; height: 20px; display: grid; place-items: center; }
+  .pin::before { content: ""; position: absolute; inset: 0; border-radius: 50%; background: var(--c); opacity: .18; }
+  .pin::after { content: ""; position: absolute; inset: 5px; border-radius: 50%; background: var(--c); opacity: 0; }
+  .pin.ring::after, .pin.an::after { animation: pulse-ring 2.4s ease-out infinite; }
+  .pin b { position: relative; width: 9px; height: 9px; border-radius: 50%; background: var(--c); border: 1.5px solid var(--abyss); box-sizing: content-box; margin: -1.5px; }
+  .pin.unc b { border-style: dashed; }
+  .me { position: relative; margin: 2px; width: 14px; height: 14px; border-radius: 50%; background: var(--electric); border: 2px solid var(--foam); }
+  .me::after { content: ""; position: absolute; inset: -2px; border-radius: 50%; background: var(--electric); animation: pulse-ring 2.4s ease-out infinite; }
+  .pick { margin: 1px; width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--cyan); background: rgb(101 217 242 / .3); }
+  .leaflet-popup-content-wrapper, .leaflet-popup-tip { background: rgb(6 21 47 / .9); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
     color: var(--foam); border: 1px solid var(--line); }
-  .leaflet-popup-content-wrapper { border-radius: 16px 16px 16px 4px; }
-  .leaflet-popup { animation: pop .35s var(--ease); }
-  .leaflet-popup-content { font-size: 14px; margin: 10px 12px; }
+  .leaflet-popup-content-wrapper { border-radius: 16px; }
+  .leaflet-popup-content { font-size: 14px; line-height: 1.5; margin: 10px 12px; color: var(--mist); }
+  .leaflet-popup-content b { color: var(--foam); font-weight: 600; }
   .leaflet-container a.leaflet-popup-close-button { color: var(--mist); }
   .leaflet-control-attribution { background: rgb(3 8 20 / .7) !important; color: var(--dim) !important; }
   .leaflet-control-attribution a { color: var(--mist) !important; }
-  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .001ms !important; } }
+
+  /* chat bubbles: same card as the Assistant response */
+  #chat { position: absolute; left: 12px; right: 12px; bottom: 10px; z-index: 600; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+  .bub { align-self: flex-start; max-width: 92%; pointer-events: auto; font-size: .95rem; line-height: 1.5; color: var(--mist); padding: 12px 16px;
+    border: 1px solid var(--line); border-radius: 16px; background: rgb(6 21 47 / .8);
+    -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); animation: stage-in .7s var(--ease) both; }
+  .bub.err { color: var(--sev-moderate); border-color: rgb(255 155 61 / .3); }
+  .bub b { display: block; font-weight: 500; line-height: 1.3; }
+  .bub span.sub { display: block; margin-top: 4px; }
+  .spin { display: inline-block; width: 13px; height: 13px; border: 2px solid var(--cyan); border-right-color: transparent;
+    border-radius: 50%; animation: spin 1s linear infinite; vertical-align: -2px; }
+
+  /* composer: same box as the Assistant input */
+  #dock { position: relative; padding: 12px 12px calc(8px + env(safe-area-inset-bottom)); }
+  #dock::before { content: ""; position: absolute; left: -8px; right: -8px; bottom: -12px; height: 96px; border-radius: 50%; filter: blur(40px);
+    background: radial-gradient(60% 60% at 50% 70%, rgb(40 104 255 / .4), transparent 70%); opacity: .4; transition: opacity .7s; pointer-events: none; }
+  #dock:focus-within::before { opacity: 1; }
+  #dock.rec::before { background: radial-gradient(60% 60% at 50% 70%, rgb(255 77 77 / .35), transparent 70%); opacity: 1; }
+  #box { position: relative; background: rgb(6 21 47 / .8); border: 1px solid rgb(238 244 255 / .15); border-radius: 16px; padding: 8px;
+    -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px); transition: border-color .3s; }
+  #box:focus-within { border-color: rgb(238 244 255 / .35); }
+  #box.rec { border-color: rgb(255 77 77 / .7); }
+  #thumbwrap { padding-bottom: 8px; }
+  .th { position: relative; display: inline-block; width: 64px; height: 64px; border-radius: 12px; overflow: hidden; border: 1px solid var(--line); }
+  .th img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  #rm { position: absolute; top: 3px; right: 3px; width: 20px; height: 20px; padding: 0; border: 0; border-radius: 50%;
+    background: rgb(3 8 20 / .75); color: var(--foam); display: grid; place-items: center; cursor: pointer; }
+  #rm svg { width: 12px; height: 12px; }
+  #textin { display: block; width: 100%; min-height: 44px; max-height: 160px; resize: none; border: 0; background: transparent;
+    padding: 10px 8px; color: var(--foam); font-size: 1rem; line-height: 1.5; }
+  #textin:focus-visible { outline: none; }
+  #textin::-webkit-scrollbar { width: 6px; }
+  #textin::-webkit-scrollbar-thumb { background: rgb(169 184 211 / .25); border-radius: 3px; }
+  ::placeholder { color: var(--dim); }
+  #recui { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 10px 0 4px; }
+  #timer { display: flex; align-items: center; gap: 8px; font: .8125rem ui-monospace, monospace; color: var(--mist); font-variant-numeric: tabular-nums; }
+  #timer i { width: 8px; height: 8px; border-radius: 50%; background: var(--sev-severe); animation: pulse 1s infinite; }
+  #bars { display: flex; align-items: center; justify-content: center; gap: 2px; height: 36px; }
+  #bars i { width: 2px; border-radius: 2px; background: rgb(101 217 242 / .6); animation: pulse 1s ease-in-out infinite; }
+  .actions { display: flex; align-items: center; justify-content: space-between; padding-top: 4px; }
+  .rb { width: 44px; height: 44px; border-radius: 12px; border: 0; padding: 0; display: grid; place-items: center; cursor: pointer;
+    background: transparent; color: var(--mist); transition: background-color .2s, color .2s, transform .2s; }
+  .rb:hover { background: rgb(238 244 255 / .1); color: var(--foam); }
+  .rb:active { transform: scale(.95); }
+  .rb svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  #main[data-s=send], #main[data-s=sending] { background: var(--foam); color: var(--abyss); }
+  #main[data-s=send]:hover { background: #fff; }
+  #main[data-s=sending] { cursor: default; }
+  #main[data-s=sending] svg { width: 16px; height: 16px; fill: currentColor; stroke: none; animation: pulse 1s infinite; }
+  #main[data-s=rec] { background: rgb(101 217 242 / .2); color: var(--cyan); }
+  #box.rec #attach { visibility: hidden; }
+  #hint { margin: 10px 0 0; text-align: center; font-size: .8125rem; line-height: 1.25rem; font-weight: 500; color: var(--dim); }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; } }
 </style>
 </head>
 <body>
-<svg width="0" height="0" style="position:absolute" aria-hidden="true">
-  <symbol id="eye" viewBox="0 0 100 100">
-    <circle cx="50" cy="50" r="37" fill="none" stroke="currentColor" stroke-width="13"/>
-    <g class="eyes"><ellipse cx="40" cy="50" rx="5.6" ry="8.5" fill="currentColor"/><ellipse cx="60" cy="50" rx="5.6" ry="8.5" fill="currentColor"/></g>
-  </symbol>
-</svg>
-
 <div id="app">
-  <header>
-    <h1 class="brand" aria-label="4forces">4f<svg aria-hidden="true"><use href="#eye"/></svg>rces</h1>
-    <select id="lang" aria-label="Language"><option value="en">EN</option><option value="es">ES</option><option value="ht">HT</option></select>
-  </header>
-  <div id="status" class="ok"><h1></h1><p></p></div>
+  <section id="hero">
+    <canvas id="orb" aria-hidden="true"></canvas><div class="veil" aria-hidden="true"></div>
+    <header>
+      <span class="wm" id="wm" role="img" aria-label="4forces"><span aria-hidden="true"><span>4f</span><svg class="eye" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="37" fill="none" stroke="currentColor" stroke-width="13"/><g id="eyes"><ellipse cx="40" cy="50" rx="5.6" ry="8.5" fill="currentColor"/><ellipse cx="60" cy="50" rx="5.6" ry="8.5" fill="currentColor"/></g></svg><span>rces</span></span></span>
+      <select id="lang" aria-label="Language"><option value="en">EN</option><option value="es">ES</option><option value="ht">HT</option></select>
+    </header>
+    <div id="status" class="ok"><h1></h1><p></p></div>
+  </section>
   <div class="mapwrap"><div id="map"></div><div id="chat" aria-live="polite"></div></div>
 
   <div id="dock">
@@ -240,7 +261,7 @@ const markers = {};
 let reports = [], lastAlert = null, lastTide = null, me = null, meMarker = null, repPos = null, pickMarker = null;
 
 const isAnalyzing = r => r.status === "analyzing" || !r.analysis;
-const pinIcon = (color, cls) => L.divIcon({ className: "", iconSize: [18, 18], html: `<div class="pin ${cls}" style="--c:${color}"></div>` });
+const pinIcon = (color, cls) => L.divIcon({ className: "", iconSize: [20, 20], html: `<div class="pin ${cls}" style="--c:${color}"><b></b></div>` });
 const dotIcon = cls => L.divIcon({ className: "", iconSize: [18, 18], html: `<div class="${cls}"></div>` });
 
 function popup(r) {
@@ -347,7 +368,7 @@ function state() {
   const s = sending ? "sending" : recording ? "rec" : has ? "send" : "mic";
   const m = $("main");
   m.dataset.s = s; m.innerHTML = ICON[s]; 
-  $("box").classList.toggle("rec", recording);
+  $("box").classList.toggle("rec", recording); $("dock").classList.toggle("rec", recording);
   $("textin").hidden = recording; $("recui").hidden = !recording;
   $("thumbwrap").hidden = !file || recording;
   $("textin").disabled = sending;
@@ -439,6 +460,97 @@ function showResult(r) {
   b.innerHTML = h || esc(t("failed"));
   b.style.animation = "none"; void b.offsetWidth; b.style.animation = "";
 }
+
+// --- brand: pointer-following wordmark eyes + animated orb behind the header (ported from EyeMark.tsx / OrbCanvas.tsx) ---
+const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+(function wordmark() {
+  const svg = document.querySelector(".eye"), eyes = $("eyes"), rx = eyes.querySelectorAll("ellipse");
+  let look = { x: 0, y: 0 }, blink = false, ry = 8.5;
+  const paint = () => { eyes.style.transform = `translate(${look.x}px, ${look.y}px) scaleY(${blink ? .12 : 1})`; };
+  const setRy = v => rx.forEach(e => e.setAttribute("ry", v));
+  $("wm").onpointerenter = () => setRy(10);
+  $("wm").onpointerleave = () => setRy(8.5);
+  if (reduced) return;
+  let raf = 0, px = 0, py = 0;
+  addEventListener("pointermove", e => {
+    px = e.clientX; py = e.clientY;
+    if (raf) return;
+    raf = requestAnimationFrame(() => {
+      raf = 0;
+      const r = svg.getBoundingClientRect(), dx = px - (r.left + r.width / 2), dy = py - (r.top + r.height / 2);
+      const d = Math.hypot(dx, dy) || 1, reach = Math.min(1, d / 260);
+      look = { x: dx / d * 7 * reach, y: dy / d * 6 * reach }; paint();
+    });
+  }, { passive: true });
+  (function next() {
+    setTimeout(() => { blink = true; paint(); setTimeout(() => { blink = false; paint(); }, 140); next(); }, 2800 + Math.random() * 4200);
+  })();
+})();
+
+(function orb() {
+  const cv = $("orb"), ctx = cv.getContext("2d"), hero = $("hero");
+  const A = [40, 104, 255], B = [101, 217, 242], C = [120, 90, 255], ENERGY = .35, SPIN = .25;   // "idle" palette
+  const rgba = (c, a) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
+  let seed = 5; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;   // deterministic particles
+  const parts = Array.from({ length: 60 }, () => ({ a: rnd() * 6.283, rr: 1.08 + rnd() * .5, s: .4 + rnd() * 1.2, z: rnd() }));
+  let w = 1, h = 1, last = 0, t0 = performance.now(), blinkAt = 3, blinkT = 0, shown = true;
+
+  function size() {
+    const r = hero.getBoundingClientRect(), dpr = Math.min(devicePixelRatio || 1, 1.5);
+    w = Math.max(1, r.width); h = Math.max(1, r.height);
+    cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    draw(4, 0);
+  }
+  function draw(t, dt) {
+    const cx = w * .78, cy = h * .5, R = Math.min(h * .36, w * .24) * (1 + Math.sin(t * 1.15) * .02 * .85);
+    ctx.clearRect(0, 0, w, h);
+    const halo = ctx.createRadialGradient(cx, cy, R * .6, cx, cy, R * 2.1);
+    halo.addColorStop(0, rgba(A, .32 + ENERGY * .15)); halo.addColorStop(.45, rgba(C, .08)); halo.addColorStop(1, rgba(A, 0));
+    ctx.fillStyle = halo; ctx.fillRect(0, 0, w, h);
+    ctx.save(); ctx.beginPath();
+    for (let i = 0; i <= 48; i++) {
+      const a = i / 48 * 6.283, wob = 1 + (Math.sin(a * 3 + t * 1.1) * .012 + Math.sin(a * 5 - t * .9) * .008) * (1 + ENERGY * 2);
+      ctx[i ? "lineTo" : "moveTo"](cx + Math.cos(a) * R * wob, cy + Math.sin(a) * R * wob);
+    }
+    ctx.closePath();
+    const base = ctx.createRadialGradient(cx - R * .3, cy - R * .4, R * .1, cx, cy, R);
+    base.addColorStop(0, "#0d2a7a"); base.addColorStop(1, "#040b22"); ctx.fillStyle = base; ctx.fill(); ctx.clip();
+    ctx.globalCompositeOperation = "lighter";
+    [[A, .9, 0, .62], [B, 1.3, 2.1, .5], [C, .7, 4.2, .55], [B, 1.7, 1, .32]].forEach(([col, sp, ph, sz], i) => {
+      const tt = t * sp * (.3 + SPIN * .4) + ph, bx = cx + Math.cos(tt) * R * .38 + Math.sin(tt * 1.7 + i) * R * .12, by = cy + Math.sin(tt * 1.3) * R * .34;
+      const g = ctx.createRadialGradient(bx, by, 0, bx, by, R * sz * (1.4 + ENERGY * .4));
+      g.addColorStop(0, rgba(col, .75)); g.addColorStop(1, rgba(col, 0)); ctx.fillStyle = g; ctx.fillRect(cx - R, cy - R, R * 2, R * 2);
+    });
+    ctx.globalCompositeOperation = "source-over";
+    blinkT += dt; let open = 1;
+    if (!reduced && blinkT > blinkAt) { const ph = (blinkT - blinkAt) / .16; open = ph < 1 ? Math.abs(1 - ph * 2) : 1; if (ph >= 1) { blinkT = 0; blinkAt = 3 + Math.random() * 4; } }
+    ctx.fillStyle = "rgba(238,244,255,.85)";
+    for (const sx of [-1, 1]) { ctx.beginPath(); ctx.ellipse(cx + sx * R * .17 + Math.sin(t * .4) * R * .04, cy, R * .065, Math.max(.5, R * .11 * open), 0, 0, 6.283); ctx.fill(); }
+    ctx.restore();
+    ctx.beginPath(); ctx.arc(cx, cy, R, 0, 6.283);
+    const rim = ctx.createLinearGradient(cx - R, cy - R, cx + R, cy + R);
+    rim.addColorStop(0, rgba(B, .75)); rim.addColorStop(.5, "rgba(255,255,255,.08)"); rim.addColorStop(1, rgba(C, .5));
+    ctx.strokeStyle = rim; ctx.lineWidth = 1.5; ctx.stroke();
+    for (const q of parts) {
+      q.a += dt * q.s * (.15 + SPIN * .9);
+      const x = cx + Math.cos(q.a) * R * q.rr, y = cy + Math.sin(q.a) * R * q.rr * .9, s = 1 + q.z * 1.6;
+      ctx.fillStyle = rgba(B, Math.min(1, (.15 + q.z * .5) * (.4 + ENERGY))); ctx.fillRect(x - s / 2, y - s / 2, s, s);
+    }
+  }
+  new ResizeObserver(size).observe(hero);
+  if (reduced) return;   // single still frame
+  // ponytail: ~30 fps cap, runs only while the hero is on screen and the tab is visible
+  new IntersectionObserver(([e]) => { shown = e.isIntersecting; }).observe(hero);
+  requestAnimationFrame(function loop(now) {
+    requestAnimationFrame(loop);
+    if (!shown || document.hidden || now - last < 33) return;
+    const dt = Math.min(.1, (now - (last || now)) / 1000); last = now;
+    draw((now - t0) / 1000, dt);
+  });
+})();
+
+// fade the page in like the site's .reveal blocks
+[document.querySelector(".mapwrap"), $("dock")].forEach((e, i) => { e.classList.add("reveal"); setTimeout(() => e.classList.add("is-in"), 80 + i * 120); });
 
 applyLang();
 state();
