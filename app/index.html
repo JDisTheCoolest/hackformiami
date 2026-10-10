@@ -45,42 +45,90 @@
   @keyframes pulse { 50% { opacity: .4; } }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  #app { height: 100%; max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; background: var(--abyss); }
-
-  /* hero band: brand, orb background, status */
-  #hero { position: relative; isolation: isolate; overflow: hidden; padding-top: env(safe-area-inset-top);
-    background: radial-gradient(120% 80% at 70% 0%, #0b2266 0%, var(--deep) 45%, var(--abyss) 100%); }
-  #orb { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; }
-  .veil { position: absolute; inset: 0; z-index: 1; pointer-events: none;
-    background: linear-gradient(90deg, rgb(3 8 20 / .86) 0%, rgb(3 8 20 / .5) 42%, rgb(3 8 20 / .05) 72%); }
-  header { position: relative; z-index: 2; display: flex; align-items: center; height: 56px; padding: 0 16px; }
-  .wm { flex: 1; display: inline-flex; align-items: center; font-size: 1.5rem; color: var(--foam); }
+  #app { position: relative; height: 100%; max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; overflow: hidden;
+    padding-top: env(safe-area-inset-top);
+    background: radial-gradient(120% 55% at 50% 0%, #1a45dc 0%, #0e2a8f 32%, rgb(10 31 69 / 0) 75%), linear-gradient(180deg, var(--trench) 0%, var(--abyss) 60%); }
+  header { display: flex; align-items: center; height: 52px; padding: 0 16px; }
+  .wm { flex: 1; display: inline-flex; align-items: center; font-size: 1.3rem; color: var(--foam); }
   .wm > span { display: inline-flex; align-items: baseline; font-weight: 600; letter-spacing: -.045em; line-height: 1; }
   .eye { width: .74em; height: .74em; margin: 0 .02em; transform: translateY(.03em); align-self: baseline; overflow: visible; }
   #eyes { transform-origin: 50px 50px; transition: transform .16s var(--ease); }
   #eyes ellipse { transition: all .22s; }
-  #lang { height: 32px; padding: 0 6px; border-radius: 10px; border: 1px solid rgb(238 244 255 / .15); background: rgb(3 8 20 / .5);
-    font-size: 12px; color: var(--foam); cursor: pointer; }
-  #lang option { background: var(--deep); }
+  .ib { position: relative; width: 40px; height: 40px; border-radius: 50%; border: 1px solid rgb(238 244 255 / .15); background: rgb(238 244 255 / .08);
+    color: var(--foam); display: grid; place-items: center; cursor: pointer; padding: 0; }
+  .ib svg, .tab svg, .seg svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  #belldot { position: absolute; top: 6px; right: 7px; width: 9px; height: 9px; border-radius: 50%; background: var(--sev-severe); border: 2px solid #12328f; }
+  #sub { display: flex; align-items: center; justify-content: space-between; padding: 0 16px 10px; gap: 8px; }
+  #loc { margin: 0; color: var(--foam); font-size: .8125rem; font-weight: 500; }
+  .chip { font-size: 11px; font-weight: 500; border: 1px solid; border-radius: 999px; padding: 2px 9px; background: rgb(3 8 20 / .35); }
+  .chip.live { color: var(--sev-none); border-color: rgb(76 195 138 / .4); }
+  .chip.off { color: var(--sev-low); border-color: rgb(242 209 75 / .4); }
 
-  #status { position: relative; z-index: 2; margin: 4px 16px 16px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 16px;
-    background: rgb(6 21 47 / .5); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
-    transition: border-color .5s, background-color .5s; }
-  #status.pop { animation: stage-in .7s var(--ease) both; }
-  #status h1 { margin: 0; font-size: clamp(1.9rem, 9vw, 2.6rem); font-weight: 600; line-height: .95; letter-spacing: -.045em; text-wrap: balance; }
-  #status p { margin: 10px 0 0; color: var(--mist); font-size: 1rem; line-height: 1.5; }
-  #status.alert { border-color: rgb(255 77 77 / .3); background: rgb(255 77 77 / .08); }
-  #status.alert h1 { color: var(--sev-severe); }
-  #status.maybe { border-color: rgb(255 155 61 / .3); background: rgb(255 155 61 / .08); }
-  #status.maybe h1 { color: var(--sev-moderate); }
-  #status.ok { border-color: rgb(101 217 242 / .2); background: rgb(101 217 242 / .06); }
-  #status.ok h1 { color: var(--sev-none); }
+  main { position: relative; flex: 1; min-height: 0; }
+  .screen { position: absolute; inset: 0; overflow-y: auto; padding: 0 16px 16px; display: none; flex-direction: column; gap: 12px; }
+  .screen.on { display: flex; }
+  #s-map { padding: 0; }
+  h2 { margin: 4px 0 0; font-size: 1.5rem; font-weight: 600; letter-spacing: -.04em; }
+  .card { border: 1px solid var(--line); border-radius: 16px; background: rgb(6 21 47 / .5); padding: 14px; }
 
-  /* map */
-  .mapwrap { position: relative; flex: 1; min-height: 0; border-top: 1px solid var(--line); }
+  /* tide card */
+  .tidecard { --rc: var(--sev-moderate); position: relative; border: 1px solid rgb(238 244 255 / .16); border-radius: 20px; padding: 14px 16px 12px;
+    background: linear-gradient(135deg, rgb(40 104 255 / .4), color-mix(in srgb, var(--rc) 38%, transparent));
+    -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
+  .tidecard .k { display: flex; align-items: center; gap: 6px; font-size: .75rem; color: var(--mist); font-weight: 500; }
+  .tidecard .k svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .tidecard .big { margin: 2px 0 0; font-size: 1.7rem; font-weight: 600; letter-spacing: -.04em; line-height: 1.1; color: var(--rc); }
+  .tidecard .king { position: absolute; top: 12px; right: 14px; font-size: .6875rem; color: var(--mist); background: rgb(238 244 255 / .12); border-radius: 999px; padding: 2px 9px; }
+  .tidecard svg.curve { display: block; width: 100%; height: 70px; margin-top: 4px; overflow: visible; }
+  .tidecard .foot { display: flex; justify-content: space-between; font-size: .75rem; color: var(--mist); font-variant-numeric: tabular-nums; }
+
+  /* map card / full map */
+  #mapslot { position: relative; height: 230px; flex: none; border-radius: 20px; overflow: hidden; border: 1px solid rgb(238 244 255 / .16); }
+  #s-map .mapwrap { border-radius: 0; }
+  .mapwrap { position: absolute; inset: 0; }
   #map { position: absolute; inset: 0; background: var(--abyss); }
   .leaflet-tile-pane { filter: brightness(.8) sepia(1) hue-rotate(185deg) saturate(1.7); }
   .osm-dark { filter: invert(1) hue-rotate(180deg) brightness(.85) contrast(.9); }
+  #rcount { position: absolute; top: 10px; left: 10px; z-index: 500; font-size: .6875rem; font-weight: 500; color: var(--foam);
+    background: rgb(3 8 20 / .75); border-radius: 999px; padding: 2px 9px; pointer-events: none; }
+
+  /* alert / status card */
+  #status { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 16px;
+    background: rgb(6 21 47 / .5); transition: border-color .5s, background-color .5s; }
+  #status.pop { animation: stage-in .7s var(--ease) both; }
+  .aico { flex: none; width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: rgb(238 244 255 / .1); }
+  .aico svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .txt { flex: 1; min-width: 0; }
+  #status h1, .arow h3 { margin: 0; font-size: 1rem; font-weight: 600; letter-spacing: -.02em; line-height: 1.25; }
+  #status p, .arow p { margin: 2px 0 0; color: var(--mist); font-size: .8125rem; line-height: 1.35; }
+  .listen { flex: none; display: inline-flex; align-items: center; gap: 5px; height: 32px; padding: 0 12px; border: 0; border-radius: 999px;
+    background: var(--foam); color: var(--abyss); font-size: .8125rem; font-weight: 600; cursor: pointer; }
+  .listen svg { width: 11px; height: 11px; fill: currentColor; stroke: none; }
+  #status.alert, .arow { border-color: rgb(255 77 77 / .45); background: rgb(255 77 77 / .1); }
+  #status.alert .aico, .arow .aico { background: rgb(255 77 77 / .2); color: var(--sev-severe); }
+  #status.maybe { border-color: rgb(255 155 61 / .35); background: rgb(255 155 61 / .1); }
+  #status.maybe .aico { background: rgb(255 155 61 / .2); color: var(--sev-moderate); }
+  #status.ok { border-color: rgb(101 217 242 / .2); background: rgb(101 217 242 / .06); }
+  #status.ok .aico { background: rgb(76 195 138 / .2); color: var(--sev-none); }
+  .arow { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid; border-radius: 16px; }
+  .empty { color: var(--dim); text-align: center; padding: 24px 0; font-size: .9rem; }
+
+  .segs { display: flex; gap: 8px; }
+  .seg { flex: 1; height: 44px; border-radius: 12px; border: 1px solid var(--line); background: rgb(238 244 255 / .04); color: var(--mist); font-weight: 500; cursor: pointer; }
+  .seg[aria-pressed=true] { background: var(--foam); color: var(--abyss); }
+  .meid { color: var(--dim); font-size: .75rem; }
+
+  /* tab bar */
+  #tabs { position: relative; z-index: 1600; display: grid; grid-template-columns: repeat(5, 1fr); align-items: end;
+    border-top: 1px solid var(--line); background: rgb(3 8 20 / .85); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
+    padding: 8px 0 calc(8px + env(safe-area-inset-bottom)); }
+  .tab { background: none; border: 0; padding: 4px 0; color: var(--dim); display: flex; flex-direction: column; align-items: center; gap: 3px;
+    font-size: .625rem; font-weight: 500; cursor: pointer; }
+  .tab[aria-current=page] { color: var(--cyan); }
+  .fab { justify-self: center; width: 56px; height: 56px; margin-top: -26px; border-radius: 50%; border: 0; padding: 0; display: grid; place-items: center;
+    background: var(--cyan); color: var(--abyss); cursor: pointer; box-shadow: 0 0 0 4px var(--abyss), 0 10px 30px -6px rgb(101 217 242 / .7); transition: transform .3s var(--ease); }
+  .fab svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; }
+  .fab.open { transform: rotate(45deg); }
 
   /* report pins, same recipe as MiamiMap.tsx: soft halo + core with dark stroke (dashed = unconfirmed) */
   .pin { position: relative; width: 20px; height: 20px; display: grid; place-items: center; }
@@ -102,8 +150,8 @@
   .leaflet-control-attribution a { color: var(--mist) !important; }
 
   /* chat bubbles: same card as the Assistant response */
-  #chat { position: absolute; left: 12px; right: 12px; bottom: 10px; z-index: 600; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
-  .bub { align-self: flex-start; max-width: 92%; pointer-events: auto; font-size: .95rem; line-height: 1.5; color: var(--mist); padding: 12px 16px;
+  #chat { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
+  .bub { align-self: flex-start; max-width: 92%; font-size: .95rem; line-height: 1.5; color: var(--mist); padding: 12px 16px;
     border: 1px solid var(--line); border-radius: 16px; background: rgb(6 21 47 / .8);
     -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); animation: stage-in .7s var(--ease) both; }
   .bub.err { color: var(--sev-moderate); border-color: rgb(255 155 61 / .3); }
@@ -113,8 +161,9 @@
     border-radius: 50%; animation: spin 1s linear infinite; vertical-align: -2px; }
 
   /* composer: same box as the Assistant input */
-  #dock { position: relative; padding: 12px 12px calc(8px + env(safe-area-inset-bottom)); }
-  #dock::before { content: ""; position: absolute; left: -8px; right: -8px; bottom: -12px; height: 96px; border-radius: 50%; filter: blur(40px);
+  #dock { position: absolute; left: 0; right: 0; bottom: calc(64px + env(safe-area-inset-bottom)); z-index: 1500; padding: 24px 12px 6px;
+    background: linear-gradient(180deg, transparent, rgb(3 8 20 / .9) 40%); animation: stage-in .5s var(--ease) both; }
+  #dock::before { content: ""; position: absolute; left: -8px; right: -8px; bottom: -30px; height: 96px; border-radius: 50%; filter: blur(40px);
     background: radial-gradient(60% 60% at 50% 70%, rgb(40 104 255 / .4), transparent 70%); opacity: .4; transition: opacity .7s; pointer-events: none; }
   #dock:focus-within::before { opacity: 1; }
   #dock.rec::before { background: radial-gradient(60% 60% at 50% 70%, rgb(255 77 77 / .35), transparent 70%); opacity: 1; }
@@ -157,17 +206,33 @@
 </head>
 <body>
 <div id="app">
-  <section id="hero">
-    <canvas id="orb" aria-hidden="true"></canvas><div class="veil" aria-hidden="true"></div>
-    <header>
-      <span class="wm" id="wm" role="img" aria-label="4forces"><span aria-hidden="true"><span>4f</span><svg class="eye" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="37" fill="none" stroke="currentColor" stroke-width="13"/><g id="eyes"><ellipse cx="40" cy="50" rx="5.6" ry="8.5" fill="currentColor"/><ellipse cx="60" cy="50" rx="5.6" ry="8.5" fill="currentColor"/></g></svg><span>rces</span></span></span>
-      <select id="lang" aria-label="Language"><option value="en">EN</option><option value="es">ES</option><option value="ht">HT</option></select>
-    </header>
-    <div id="status" class="ok"><h1></h1><p></p></div>
-  </section>
-  <div class="mapwrap"><div id="map"></div><div id="chat" aria-live="polite"></div></div>
+  <header>
+    <span class="wm" id="wm" role="img" aria-label="4forces"><span aria-hidden="true"><span>4f</span><svg class="eye" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="37" fill="none" stroke="currentColor" stroke-width="13"/><g id="eyes"><ellipse cx="40" cy="50" rx="5.6" ry="8.5" fill="currentColor"/><ellipse cx="60" cy="50" rx="5.6" ry="8.5" fill="currentColor"/></g></svg><span>rces</span></span></span>
+    <button type="button" class="ib" id="bell" aria-label="Alerts"><svg viewBox="0 0 24 24"><path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/></svg><i id="belldot" hidden></i></button>
+  </header>
+  <div id="sub"><p id="loc"></p><span id="live" class="chip off"></span></div>
 
-  <div id="dock">
+  <main>
+    <section id="s-home" class="screen on">
+      <div id="tide" class="tidecard" hidden></div>
+      <div id="mapslot"><div class="mapwrap" id="mapwrap"><span id="rcount"></span><div id="map"></div></div></div>
+      <div id="status" class="ok">
+        <span class="aico"></span><div class="txt"><h1></h1><p></p></div>
+        <button type="button" class="listen" id="listen" hidden><svg viewBox="0 0 24 24"><path d="M6 3l14 9-14 9z"/></svg><span></span></button>
+      </div>
+    </section>
+    <section id="s-map" class="screen"></section>
+    <section id="s-alerts" class="screen"><h2 data-t="navAlerts"></h2><div id="alist" style="display:grid;gap:10px"></div></section>
+    <section id="s-me" class="screen">
+      <h2 data-t="navMe"></h2>
+      <div class="card"><p class="meid" data-t="langLabel" style="margin:0 0 10px"></p>
+        <div class="segs"><button type="button" class="seg" data-lang="en">EN</button><button type="button" class="seg" data-lang="es">ES</button><button type="button" class="seg" data-lang="ht">HT</button></div></div>
+      <p class="meid" id="meid"></p>
+    </section>
+  </main>
+
+  <div id="dock" hidden>
+    <div id="chat" aria-live="polite"></div>
     <div id="box">
       <div id="thumbwrap" hidden><div class="th"><img id="thumb" alt="">
         <button type="button" id="rm" aria-label="Remove photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div></div>
@@ -181,6 +246,14 @@
     </div>
     <p id="hint"></p>
   </div>
+
+  <nav id="tabs">
+    <button type="button" class="tab" data-go="home" aria-current="page"><svg viewBox="0 0 24 24"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span data-t="navHome"></span></button>
+    <button type="button" class="tab" data-go="map"><svg viewBox="0 0 24 24"><path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"/><path d="M15 5.764v15M9 3.236v15"/></svg><span data-t="navMap"></span></button>
+    <button type="button" class="fab" id="fab" aria-label="Report"><svg viewBox="0 0 24 24"><path d="M5 12h14M12 5v14"/></svg></button>
+    <button type="button" class="tab" data-go="alerts"><svg viewBox="0 0 24 24"><path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/></svg><span data-t="navAlerts"></span></button>
+    <button type="button" class="tab" data-go="me"><svg viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span data-t="navMe"></span></button>
+  </nav>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -204,7 +277,8 @@ const TYPES = {
     other: ["Ijans toupre ou", "Posib ijans toupre", "ijans"] },
 };
 const T = {
-  en: { textph: "Report flooding: add a photo or describe what you see", hint: "📍 Your location · tap the map to change",
+  en: { navHome: "Home", navMap: "Map", navAlerts: "Alerts", navMe: "Me", langLabel: "Language", tideRisk: "Tide risk", king: "King-tide window", now: "Now", high: "High", riskw: { low: "Low", elevated: "Elevated", high: "High" }, reports24: "reports · 24 h", listen: "Listen", noAlerts: "No alerts yet.", neighbors: "neighbor reports", ago: "min ago", test: "test alert", live: "Live", offline: "Offline", yourLoc: "Your location", miami: "Miami, Florida", reporter: "Reporter ID",
+    textph: "Report flooding: add a photo or describe what you see", hint: "📍 Your location · tap the map to change",
     none: "No flooding near you", nexthigh: "Next high tide", warn: "Don't walk or drive through water", unconf: "Not confirmed yet",
     analyzing: "Analyzing...", unconfirmed: "Unconfirmed", sev: { none: "No", low: "Minor", moderate: "Moderate", severe: "Severe" },
     about: "about", in: "in", cars: "Cars can pass", nocars: "Cars can't pass",
@@ -212,7 +286,8 @@ const T = {
     thanksPhoto: "Checking your photo...", thanks: "Checking your report...", failed: "Couldn't read this report. Please try again.",
     e400: "Add a photo or text.", e413: "Photo too large (max 10 MB).", e502: "AI failed, please try again.", eNet: "Network error, try again.",
     nomic: "Voice not supported here.", listening: "Listening..." },
-  es: { textph: "Reporte una inundación: agregue una foto o describa lo que ve", hint: "📍 Su ubicación · toque el mapa para cambiarla",
+  es: { navHome: "Inicio", navMap: "Mapa", navAlerts: "Alertas", navMe: "Yo", langLabel: "Idioma", tideRisk: "Riesgo de marea", king: "Marea viva", now: "Ahora", high: "Alta", riskw: { low: "Bajo", elevated: "Elevado", high: "Alto" }, reports24: "reportes · 24 h", listen: "Escuchar", noAlerts: "Aún no hay alertas.", neighbors: "reportes de vecinos", ago: "min", test: "alerta de prueba", live: "En vivo", offline: "Sin conexión", yourLoc: "Su ubicación", miami: "Miami, Florida", reporter: "ID de reportero",
+    textph: "Reporte una inundación: agregue una foto o describa lo que ve", hint: "📍 Su ubicación · toque el mapa para cambiarla",
     none: "Sin inundación cerca de usted", nexthigh: "Próxima marea alta", warn: "No camine ni conduzca por el agua", unconf: "Aún sin confirmar",
     analyzing: "Analizando...", unconfirmed: "Sin confirmar", sev: { none: "Sin", low: "Leve", moderate: "Moderada", severe: "Grave" },
     about: "aprox.", in: "pulg", cars: "Los autos pueden pasar", nocars: "Los autos no pueden pasar",
@@ -220,7 +295,8 @@ const T = {
     thanksPhoto: "Revisando su foto...", thanks: "Revisando su reporte...", failed: "No pudimos leer este reporte. Intente de nuevo.",
     e400: "Agregue una foto o texto.", e413: "Foto muy grande (máx. 10 MB).", e502: "Falló la IA, intente de nuevo.", eNet: "Error de red, intente de nuevo.",
     nomic: "Voz no disponible aquí.", listening: "Escuchando..." },
-  ht: { textph: "Rapòte inondasyon: ajoute yon foto oswa dekri sa ou wè", hint: "📍 Kote ou ye · touche kat la pou chanje l",
+  ht: { navHome: "Akèy", navMap: "Kat", navAlerts: "Alèt", navMe: "Mwen", langLabel: "Lang", tideRisk: "Risk mare", king: "Mare vivan", now: "Kounye a", high: "Wo", riskw: { low: "Ba", elevated: "Wo", high: "Trè wo" }, reports24: "rapò · 24 è", listen: "Koute", noAlerts: "Poko gen alèt.", neighbors: "rapò vwazen", ago: "min", test: "alèt tès", live: "An dirèk", offline: "Dekonekte", yourLoc: "Kote ou ye", miami: "Miami, Florid", reporter: "ID rapòtè",
+    textph: "Rapòte inondasyon: ajoute yon foto oswa dekri sa ou wè", hint: "📍 Kote ou ye · touche kat la pou chanje l",
     none: "Pa gen inondasyon toupre ou", nexthigh: "Pwochen mare wo", warn: "Pa mache ni kondui nan dlo a", unconf: "Poko konfime",
     analyzing: "Analiz...", unconfirmed: "Pa konfime", sev: { none: "Pa gen", low: "Ti", moderate: "Mwayen", severe: "Grav" },
     about: "anviwon", in: "pous", cars: "Machin ka pase", nocars: "Machin pa ka pase",
@@ -290,7 +366,14 @@ function drawReports() {
   for (const id in markers) if (!seen.has(id)) { map.removeLayer(markers[id]); delete markers[id]; }
 }
 
-// --- status headline (2 km around the user) ---
+// --- status card (2 km around the user) ---
+const AICON = {
+  warn: '<svg viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4M12 17h.01"/></svg>',
+  ok: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>',
+};
+let listenAlert = null, allAlerts = [], online = false;
+const mins = iso => Math.max(0, Math.round((Date.now() - new Date(iso)) / 60000));
+
 function drawStatus() {
   const near = p => me && dist(me, p) <= RADIUS;
   const el = $("status"), h = el.querySelector("h1"), p = el.querySelector("p");
@@ -308,13 +391,68 @@ function drawStatus() {
     el.className = "ok"; h.textContent = t("none");
     p.textContent = lastTide && lastTide.next_high ? `${t("nexthigh")} ${hhmm(lastTide.next_high.time)}` : "";
   }
+  el.querySelector(".aico").innerHTML = el.className === "ok" ? AICON.ok : AICON.warn;
+  listenAlert = alert; $("listen").hidden = !alert;
   if (prev !== el.className + h.textContent) { el.classList.remove("pop"); void el.offsetWidth; el.classList.add("pop"); }
+}
+
+// read an alert out loud in the chosen language (browser speech synthesis)
+function speak(a) {
+  if (!window.speechSynthesis || !a) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(a.message[lang] || a.message.en);
+  u.lang = { en: "en-US", es: "es-US", ht: "fr-FR" }[lang];   // no Haitian Creole voice in browsers; French is the closest
+  speechSynthesis.speak(u);
+}
+$("listen").onclick = () => speak(listenAlert);
+
+function drawTide() {
+  const d = lastTide, el = $("tide");
+  el.hidden = !d;
+  if (!d) return;
+  el.style.setProperty("--rc", css({ low: "--sev-none", elevated: "--sev-moderate", high: "--sev-severe" }[d.risk] || "--sev-moderate"));
+  const pts = (d.upcoming || []).slice(0, 5).map(x => ({ t: +new Date(x.time), h: x.height_ft }));
+  let curve = "";
+  if (pts.length > 1) {
+    const W = 300, H = 70, t0 = pts[0].t, t1 = pts[pts.length - 1].t;
+    const lo = Math.min(...pts.map(x => x.h)), hi = Math.max(...pts.map(x => x.h));
+    const X = x => (x.t - t0) / (t1 - t0 || 1) * W, Y = x => H - 8 - (x.h - lo) / (hi - lo || 1) * (H - 22);
+    let path = `M${X(pts[0])},${Y(pts[0])}`;
+    for (let i = 1; i < pts.length; i++) { const m = (X(pts[i - 1]) + X(pts[i])) / 2; path += ` C${m},${Y(pts[i - 1])} ${m},${Y(pts[i])} ${X(pts[i])},${Y(pts[i])}`; }
+    const nx = Math.min(W, Math.max(0, (Date.now() - t0) / (t1 - t0 || 1) * W));
+    curve = `<svg class="curve" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="tg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--rc)" stop-opacity=".35"/><stop offset="1" stop-color="var(--rc)" stop-opacity="0"/></linearGradient></defs>
+      <path d="${path} L${W},${H} L0,${H} Z" fill="url(#tg)"/><path d="${path}" fill="none" stroke="var(--rc)" stroke-width="2" vector-effect="non-scaling-stroke"/>
+      <line x1="${nx}" x2="${nx}" y1="0" y2="${H}" stroke="rgb(238 244 255 / .5)" stroke-dasharray="2 4" vector-effect="non-scaling-stroke"/></svg>`;
+  }
+  el.innerHTML = `<p class="k"><svg viewBox="0 0 24 24"><path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/></svg>${t("tideRisk")} · ${esc(d.station.split(",")[0])}</p>
+    <p class="big">${esc(t("riskw")[d.risk] || d.risk)}</p>${d.king_tide_window ? `<span class="king">${t("king")}</span>` : ""}${curve}
+    <div class="foot"><span>${t("now")}</span><span>${d.next_high ? `${t("high")} ${hhmm(d.next_high.time)} · ${Number(d.next_high.height_ft).toFixed(2)} ft` : ""}</span></div>`;
+}
+
+function drawAlerts() {
+  $("belldot").hidden = !lastAlert;
+  $("alist").innerHTML = allAlerts.length ? allAlerts.map((a, i) => `<div class="arow"><span class="aico">${AICON.warn}</span>
+    <div class="txt"><h3>${esc(ty(a.type, 0).replace(/ (near you|cerca de usted|toupre ou)$/, ""))} · ${esc(a.area || "")}</h3>
+    <p>${a.count} ${t("neighbors")} · ${mins(a.created_at)} ${t("ago")}${a.test ? " · " + t("test") : ""}</p></div>
+    <button type="button" class="listen" data-i="${i}"><svg viewBox="0 0 24 24"><path d="M6 3l14 9-14 9z"/></svg><span>${t("listen")}</span></button></div>`).join("")
+    : `<p class="empty">${t("noAlerts")}</p>`;
+}
+$("alist").onclick = e => { const b = e.target.closest("[data-i]"); if (b) speak(allAlerts[b.dataset.i]); };
+
+function drawChrome() {
+  $("rcount").textContent = `${reports.length} ${t("reports24")}`;
+  $("loc").textContent = "📍 " + (me ? t("yourLoc") : t("miami"));
+  $("live").className = "chip " + (online ? "live" : "off");
+  $("live").textContent = online ? t("live") : t("offline");
+  $("meid").textContent = `${t("reporter")}: ${reporterId}`;
+  $("listen").lastElementChild.textContent = t("listen");
 }
 
 // --- polling ---
 const get = u => fetch(u).then(r => r.ok ? r.json() : Promise.reject(r.status));
 async function poll() {
-  const [r, a, d] = await Promise.allSettled([get("/api/reports?hours=24"), get("/api/alerts/latest"), get("/api/tide")]);
+  const [r, a, d, all] = await Promise.allSettled([get("/api/reports?hours=24"), get("/api/alerts/latest"), get("/api/tide"), get("/api/alerts")]);
+  online = r.status === "fulfilled" || a.status === "fulfilled";
   if (r.status === "fulfilled") {
     for (const x of r.value) if (pending[x.id] && x.status !== "analyzing") showResult(x);
     reports = r.value.filter(x => x.status !== "failed");   // failed analyses never show on the map
@@ -322,7 +460,8 @@ async function poll() {
   }
   if (a.status === "fulfilled") lastAlert = a.value.alert;
   if (d.status === "fulfilled") lastTide = d.value;
-  drawStatus();
+  if (all.status === "fulfilled") allAlerts = all.value;
+  drawStatus(); drawTide(); drawAlerts(); drawChrome();
 }
 
 // --- user location ---
@@ -333,16 +472,32 @@ navigator.geolocation?.watchPosition(p => {
   else meMarker = L.marker([me.lat, me.lng], { icon: dotIcon("me"), interactive: false, zIndexOffset: -500 }).addTo(map);
   if (!centered) { centered = true; map.setView([me.lat, me.lng], 15); }
   if (!pickMarker) repPos = me;
-  drawStatus();
+  drawStatus(); drawChrome();
 }, () => {}, { enableHighAccuracy: true, maximumAge: 10000 });
 
 // --- language ---
 function applyLang() {
   document.documentElement.lang = lang;
-  $("textin").placeholder = t("textph"); $("hint").textContent = t("hint"); $("lang").value = lang;
-  drawReports(); drawStatus();
+  document.querySelectorAll("[data-t]").forEach(e => e.textContent = t(e.dataset.t));
+  document.querySelectorAll("[data-lang]").forEach(b => b.setAttribute("aria-pressed", b.dataset.lang === lang));
+  $("textin").placeholder = t("textph"); $("hint").textContent = t("hint");
+  drawReports(); drawStatus(); drawTide(); drawAlerts(); drawChrome();
 }
-$("lang").onchange = e => { lang = e.target.value; localStorage.lang = lang; applyLang(); };
+document.querySelectorAll("[data-lang]").forEach(b => b.onclick = () => { lang = b.dataset.lang; localStorage.lang = lang; applyLang(); });
+
+// --- tabs, report dock ---
+function openDock(on) { $("dock").hidden = !on; $("fab").classList.toggle("open", on); }
+function show(name) {
+  for (const x of ["home", "map", "alerts", "me"]) $("s-" + x).classList.toggle("on", x === name);
+  document.querySelectorAll(".tab").forEach(b => b.toggleAttribute("aria-current", b.dataset.go === name));
+  document.querySelectorAll(".tab[aria-current]").forEach(b => b.setAttribute("aria-current", "page"));
+  (name === "map" ? $("s-map") : $("mapslot")).append($("mapwrap"));   // one Leaflet map, shown as a card or full screen
+  if (name !== "map") openDock(false);
+  setTimeout(() => map.invalidateSize(), 50);
+}
+document.querySelectorAll(".tab").forEach(b => b.onclick = () => show(b.dataset.go));
+$("bell").onclick = () => show("alerts");
+$("fab").onclick = () => { if ($("dock").hidden) { show("map"); openDock(true); } else openDock(false); };
 
 // --- chat-style report box ---
 const ICON = {
@@ -385,7 +540,8 @@ $("photo").onchange = () => {
 };
 $("rm").onclick = () => { file = null; $("photo").value = ""; state(); };
 
-map.on("click", e => {   // tap map to change the report location
+map.on("click", e => {   // tap map to change the report location (while the report box is open)
+  if ($("dock").hidden) return;
   repPos = { lat: e.latlng.lat, lng: e.latlng.lng };
   if (pickMarker) pickMarker.setLatLng(e.latlng);
   else pickMarker = L.marker(e.latlng, { icon: dotIcon("pick"), interactive: false }).addTo(map);
@@ -461,7 +617,7 @@ function showResult(r) {
   b.style.animation = "none"; void b.offsetWidth; b.style.animation = "";
 }
 
-// --- brand: pointer-following wordmark eyes + animated orb behind the header (ported from EyeMark.tsx / OrbCanvas.tsx) ---
+// --- brand: pointer-following wordmark eyes (ported from EyeMark.tsx) ---
 const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
 (function wordmark() {
   const svg = document.querySelector(".eye"), eyes = $("eyes"), rx = eyes.querySelectorAll("ellipse");
@@ -486,71 +642,6 @@ const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
     setTimeout(() => { blink = true; paint(); setTimeout(() => { blink = false; paint(); }, 140); next(); }, 2800 + Math.random() * 4200);
   })();
 })();
-
-(function orb() {
-  const cv = $("orb"), ctx = cv.getContext("2d"), hero = $("hero");
-  const A = [40, 104, 255], B = [101, 217, 242], C = [120, 90, 255], ENERGY = .35, SPIN = .25;   // "idle" palette
-  const rgba = (c, a) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
-  let seed = 5; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;   // deterministic particles
-  const parts = Array.from({ length: 60 }, () => ({ a: rnd() * 6.283, rr: 1.08 + rnd() * .5, s: .4 + rnd() * 1.2, z: rnd() }));
-  let w = 1, h = 1, last = 0, t0 = performance.now(), blinkAt = 3, blinkT = 0, shown = true;
-
-  function size() {
-    const r = hero.getBoundingClientRect(), dpr = Math.min(devicePixelRatio || 1, 1.5);
-    w = Math.max(1, r.width); h = Math.max(1, r.height);
-    cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    draw(4, 0);
-  }
-  function draw(t, dt) {
-    const cx = w * .78, cy = h * .5, R = Math.min(h * .36, w * .24) * (1 + Math.sin(t * 1.15) * .02 * .85);
-    ctx.clearRect(0, 0, w, h);
-    const halo = ctx.createRadialGradient(cx, cy, R * .6, cx, cy, R * 2.1);
-    halo.addColorStop(0, rgba(A, .32 + ENERGY * .15)); halo.addColorStop(.45, rgba(C, .08)); halo.addColorStop(1, rgba(A, 0));
-    ctx.fillStyle = halo; ctx.fillRect(0, 0, w, h);
-    ctx.save(); ctx.beginPath();
-    for (let i = 0; i <= 48; i++) {
-      const a = i / 48 * 6.283, wob = 1 + (Math.sin(a * 3 + t * 1.1) * .012 + Math.sin(a * 5 - t * .9) * .008) * (1 + ENERGY * 2);
-      ctx[i ? "lineTo" : "moveTo"](cx + Math.cos(a) * R * wob, cy + Math.sin(a) * R * wob);
-    }
-    ctx.closePath();
-    const base = ctx.createRadialGradient(cx - R * .3, cy - R * .4, R * .1, cx, cy, R);
-    base.addColorStop(0, "#0d2a7a"); base.addColorStop(1, "#040b22"); ctx.fillStyle = base; ctx.fill(); ctx.clip();
-    ctx.globalCompositeOperation = "lighter";
-    [[A, .9, 0, .62], [B, 1.3, 2.1, .5], [C, .7, 4.2, .55], [B, 1.7, 1, .32]].forEach(([col, sp, ph, sz], i) => {
-      const tt = t * sp * (.3 + SPIN * .4) + ph, bx = cx + Math.cos(tt) * R * .38 + Math.sin(tt * 1.7 + i) * R * .12, by = cy + Math.sin(tt * 1.3) * R * .34;
-      const g = ctx.createRadialGradient(bx, by, 0, bx, by, R * sz * (1.4 + ENERGY * .4));
-      g.addColorStop(0, rgba(col, .75)); g.addColorStop(1, rgba(col, 0)); ctx.fillStyle = g; ctx.fillRect(cx - R, cy - R, R * 2, R * 2);
-    });
-    ctx.globalCompositeOperation = "source-over";
-    blinkT += dt; let open = 1;
-    if (!reduced && blinkT > blinkAt) { const ph = (blinkT - blinkAt) / .16; open = ph < 1 ? Math.abs(1 - ph * 2) : 1; if (ph >= 1) { blinkT = 0; blinkAt = 3 + Math.random() * 4; } }
-    ctx.fillStyle = "rgba(238,244,255,.85)";
-    for (const sx of [-1, 1]) { ctx.beginPath(); ctx.ellipse(cx + sx * R * .17 + Math.sin(t * .4) * R * .04, cy, R * .065, Math.max(.5, R * .11 * open), 0, 0, 6.283); ctx.fill(); }
-    ctx.restore();
-    ctx.beginPath(); ctx.arc(cx, cy, R, 0, 6.283);
-    const rim = ctx.createLinearGradient(cx - R, cy - R, cx + R, cy + R);
-    rim.addColorStop(0, rgba(B, .75)); rim.addColorStop(.5, "rgba(255,255,255,.08)"); rim.addColorStop(1, rgba(C, .5));
-    ctx.strokeStyle = rim; ctx.lineWidth = 1.5; ctx.stroke();
-    for (const q of parts) {
-      q.a += dt * q.s * (.15 + SPIN * .9);
-      const x = cx + Math.cos(q.a) * R * q.rr, y = cy + Math.sin(q.a) * R * q.rr * .9, s = 1 + q.z * 1.6;
-      ctx.fillStyle = rgba(B, Math.min(1, (.15 + q.z * .5) * (.4 + ENERGY))); ctx.fillRect(x - s / 2, y - s / 2, s, s);
-    }
-  }
-  new ResizeObserver(size).observe(hero);
-  if (reduced) return;   // single still frame
-  // ponytail: ~30 fps cap, runs only while the hero is on screen and the tab is visible
-  new IntersectionObserver(([e]) => { shown = e.isIntersecting; }).observe(hero);
-  requestAnimationFrame(function loop(now) {
-    requestAnimationFrame(loop);
-    if (!shown || document.hidden || now - last < 33) return;
-    const dt = Math.min(.1, (now - (last || now)) / 1000); last = now;
-    draw((now - t0) / 1000, dt);
-  });
-})();
-
-// fade the page in like the site's .reveal blocks
-[document.querySelector(".mapwrap"), $("dock")].forEach((e, i) => { e.classList.add("reveal"); setTimeout(() => e.classList.add("is-in"), 80 + i * 120); });
 
 applyLang();
 state();
