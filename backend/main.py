@@ -38,7 +38,7 @@ SITE_DIR = BASE_DIR.parent / "web" / "dist"  # Vite production website served at
 APP_DIR = BASE_DIR.parent / "app"          # web app (photo/text reports, map) -> served at /app
 PHOTO_DIR.mkdir(parents=True, exist_ok=True)
 
-ALERT_THRESHOLD = int(os.getenv("ALERT_THRESHOLD", "3"))   # reports needed to trigger an alert
+ALERT_THRESHOLD = int(os.getenv("ALERT_THRESHOLD", "10"))   # reports needed to trigger an alert
 ALERT_RADIUS_M = float(os.getenv("ALERT_RADIUS_M", "1000"))
 ALERT_WINDOW_MIN = int(os.getenv("ALERT_WINDOW_MIN", "60"))
 MIN_CONFIDENCE = float(os.getenv("MIN_CONFIDENCE", "0.5"))
