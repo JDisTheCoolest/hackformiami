@@ -120,9 +120,22 @@ def main():
     shot = Path(tempfile.gettempdir()) / "miami_alert_cam.jpg"
     while True:
         started = time.time()
-        if not ai_enabled():
-            print("Camera AI paused; no photos uploaded, no model calls", flush=True)
-        elif capture(shot):
+        if capture(shot):
+            # Local snapshot is always updated; AI analysis remains opt-in.
+            try:
+                target=Path("/var/lib/hackformiami-hardware/latest.jpg")
+                target.parent.mkdir(parents=True,exist_ok=True)
+                tmp=target.with_suffix(".tmp")
+                shutil.copyfile(shot,tmp)
+                tmp.chmod(0o644)
+                tmp.replace(target)
+            except OSError as exc:
+                print("Snapshot unavailable:",exc)
+            if not ai_enabled():
+                print("Camera AI paused; snapshot only, zero model calls",flush=True)
+                if ONCE: break
+                time.sleep(max(1.0, INTERVAL - (time.time() - started)))
+                continue
             digest = hashlib.sha256(shot.read_bytes()).hexdigest()
             if SKIP_UNCHANGED and digest == last_hash:
                 print("frame unchanged, skipped")
