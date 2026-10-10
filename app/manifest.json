@@ -1,0 +1,8 @@
+{
+  "name": "4forces",
+  "short_name": "4forces",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#030814",
+  "theme_color": "#030814"
+}
