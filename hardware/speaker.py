@@ -46,7 +46,7 @@ def set_led(color: str):
 
 def siren():
     if SIREN_WAV.exists() and shutil.which("aplay"):
-        subprocess.run(["aplay", "-q", str(SIREN_WAV)])
+        subprocess.run(["aplay", "-q", "-D", os.getenv("ALSA_DEVICE","default"), str(SIREN_WAV)])
     else:
         say("Alert! Alert!", "en")
 
@@ -59,6 +59,7 @@ def say(text: str, lang: str):
             playback = subprocess.run(["aplay", "-q", "-D", os.getenv("ALSA_DEVICE", "default")], input=wav.stdout, capture_output=True)
             if playback.returncode:
                 print("AUDIO ERROR:", playback.stderr.decode(errors="replace")[:300], flush=True)
+                if "--test" in __import__("sys").argv: raise RuntimeError("Speaker playback failed. Choose a working ALSA_DEVICE from aplay -l.")
         else:
             print("TTS ERROR:", wav.stderr.decode(errors="replace")[:300], flush=True)
 
