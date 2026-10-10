@@ -57,34 +57,56 @@
   #status.ok { box-shadow: 0 0 30px rgb(76 195 138 / .1); }
   #status.ok h1 { color: var(--sev-none); }
 
-  #map { flex: 1; min-height: 0; background: var(--abyss); border-top: 1px solid var(--line); }
-  #go { margin: 12px 16px calc(12px + env(safe-area-inset-bottom)); background: var(--cyan); color: var(--abyss); border: 0;
-    border-radius: 14px; padding: 18px; font-size: 18px; font-weight: 600; cursor: pointer; }
+  .mapwrap { position: relative; flex: 1; min-height: 0; border-top: 1px solid var(--line); }
+  #map { position: absolute; inset: 0; background: var(--abyss); }
+  /* bluer, darker basemap to match the site */
+  .leaflet-tile-pane { filter: brightness(.8) sepia(1) hue-rotate(185deg) saturate(1.7); }
+  #chat { position: absolute; left: 12px; right: 12px; bottom: 10px; z-index: 600; display: flex; flex-direction: column;
+    gap: 6px; pointer-events: none; }
+  .bub { align-self: flex-start; max-width: 92%; pointer-events: auto; font-size: 14px; padding: 10px 14px;
+    border: 1px solid var(--line); border-radius: 18px 18px 18px 4px; background: rgb(6 21 47 / .78);
+    -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); animation: pop .5s var(--ease); }
+  .bub.err { color: var(--sev-severe); border-color: rgb(255 77 77 / .4); }
+  .bub b { display: block; }
+  .bub span.sub { color: var(--mist); display: block; margin-top: 2px; }
 
-  #sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 2000; max-width: 480px; margin: 0 auto;
-    background: rgb(6 21 47 / .78); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
-    border-top: 1px solid var(--line); border-radius: 22px 22px 0 0; animation: up .5s var(--ease);
-    padding: 16px 16px calc(16px + env(safe-area-inset-bottom)); display: grid; gap: 10px; box-shadow: 0 -8px 30px #000a; }
-  @keyframes up { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
-  #x { position: absolute; right: 10px; top: 6px; background: none; border: 0; font-size: 26px; color: var(--mist); cursor: pointer; }
-  .big { display: block; text-align: center; border: 0; border-radius: 14px; padding: 18px; font-size: 18px; font-weight: 600; cursor: pointer; }
-  #photobtn { background: rgb(238 244 255 / .07); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border: 1px solid var(--line); }
-  #photobtn.on { border-color: var(--cyan); }
-  #send { background: var(--cyan); color: var(--abyss); }
-  #send:disabled { opacity: .5; }
-  .row { display: flex; gap: 8px; }
-  textarea { flex: 1; background: rgb(238 244 255 / .05); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; resize: none; }
+  #dock { padding: 10px 12px calc(8px + env(safe-area-inset-bottom)); }
+  #box { background: var(--deep); border: 1px solid var(--line); border-radius: 24px; padding: 8px;
+    box-shadow: 0 8px 30px rgb(0 0 0 / .35); transition: border-color .3s; }
+  #box.rec { border-color: rgb(255 77 77 / .7); }
+  #thumbwrap { padding-bottom: 6px; }
+  .th { position: relative; width: 64px; height: 64px; border-radius: 14px; overflow: hidden; }
+  .th img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  #rm { position: absolute; top: 3px; right: 3px; width: 20px; height: 20px; padding: 0; border: 0; border-radius: 50%;
+    background: rgb(0 0 0 / .7); color: #fff; display: grid; place-items: center; cursor: pointer; }
+  #rm svg { width: 12px; height: 12px; }
+  #textin { display: block; width: 100%; min-height: 44px; max-height: 160px; resize: none; border: 0; background: transparent;
+    padding: 10px 12px; color: var(--foam); font-size: 16px; }
+  #textin:focus-visible { outline: none; }
+  #textin::-webkit-scrollbar { width: 6px; }
+  #textin::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
   ::placeholder { color: var(--dim); }
-  #mic { width: 52px; background: rgb(238 244 255 / .08); border: 1px solid var(--line); border-radius: 12px; font-size: 20px; cursor: pointer; }
-  #mic.on { border-color: var(--cyan); }
-  #hint { margin: 0; font-size: 12px; color: var(--dim); }
-  #msg { font-size: 14px; font-weight: 500; color: var(--cyan); padding: 8px 14px; border: 1px solid var(--line);
-    border-radius: 16px 16px 16px 4px; background: rgb(101 217 242 / .08); animation: pop .5s var(--ease); }
-  #msg:empty { display: none; }
-  #msg.err { color: var(--sev-severe); background: rgb(255 77 77 / .08); }
+  #recui { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 10px 0 4px; }
+  #timer { display: flex; align-items: center; gap: 8px; font: 14px ui-monospace, monospace; color: rgb(255 255 255 / .8); }
+  #timer i { width: 8px; height: 8px; border-radius: 50%; background: var(--sev-severe); animation: pulse 1s infinite; }
+  #bars { display: flex; align-items: center; justify-content: center; gap: 2px; height: 36px; }
+  #bars i { width: 2px; border-radius: 2px; background: rgb(255 255 255 / .5); animation: pulse 1s ease-in-out infinite; }
+  .actions { display: flex; align-items: center; justify-content: space-between; padding-top: 4px; }
+  .rb { width: 32px; height: 32px; border-radius: 50%; border: 0; padding: 0; display: grid; place-items: center; cursor: pointer;
+    background: transparent; color: #9ca3af; transition: background .2s, color .2s; }
+  .rb:hover { background: rgb(75 85 99 / .3); color: #d1d5db; }
+  .rb svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  #main[data-s=send] { background: #fff; color: var(--deep); }
+  #main[data-s=send]:hover { background: rgb(255 255 255 / .8); }
+  #main[data-s=send] svg { width: 16px; height: 16px; }
+  #main[data-s=rec] { color: var(--sev-severe); }
+  #main[data-s=sending] { background: #fff; color: var(--deep); cursor: default; }
+  #main[data-s=sending] svg { width: 14px; height: 14px; fill: currentColor; stroke: none; animation: pulse 1s infinite; }
+  #box.rec #attach { visibility: hidden; }
   .spin { display: inline-block; width: 13px; height: 13px; border: 2px solid var(--cyan); border-right-color: transparent;
     border-radius: 50%; animation: spin 1s linear infinite; vertical-align: -2px; }
   @keyframes spin { to { transform: rotate(360deg); } }
+  #hint { margin: 6px 0 0; text-align: center; font-size: 11px; color: var(--dim); }
 
   .pin { position: relative; width: 18px; height: 18px; border-radius: 50%; background: var(--c); border: 2px solid var(--abyss);
     box-shadow: 0 0 0 5px color-mix(in srgb, var(--c) 22%, transparent), 0 0 16px var(--c); }
@@ -122,17 +144,22 @@
     <select id="lang" aria-label="Language"><option value="en">EN</option><option value="es">ES</option><option value="ht">HT</option></select>
   </header>
   <div id="status" class="ok"><h1></h1><p></p></div>
-  <div id="map"></div>
-  <button id="go"></button>
+  <div class="mapwrap"><div id="map"></div><div id="chat" aria-live="polite"></div></div>
 
-  <form id="sheet" hidden>
-    <button type="button" id="x" aria-label="Close">×</button>
-    <label class="big" id="photobtn"><input type="file" id="photo" accept="image/*" capture="environment" hidden><span id="photolbl"></span></label>
-    <div class="row"><textarea id="textin" rows="2"></textarea><button type="button" id="mic" aria-label="Voice">🎤</button></div>
+  <div id="dock">
+    <div id="box">
+      <div id="thumbwrap" hidden><div class="th"><img id="thumb" alt="">
+        <button type="button" id="rm" aria-label="Remove photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div></div>
+      <textarea id="textin" rows="1"></textarea>
+      <div id="recui" hidden><div id="timer"><i></i><span id="tm">00:00</span></div><div id="bars"></div></div>
+      <div class="actions">
+        <button type="button" class="rb" id="attach" aria-label="Photo"><svg viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg></button>
+        <input type="file" id="photo" accept="image/*" capture="environment" hidden>
+        <button type="button" class="rb" id="main" data-s="mic" aria-label="Voice"></button>
+      </div>
+    </div>
     <p id="hint"></p>
-    <div id="msg"></div>
-    <button type="submit" id="send" class="big"></button>
-  </form>
+  </div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -156,28 +183,28 @@ const TYPES = {
     other: ["Ijans toupre ou", "Posib ijans toupre", "ijans"] },
 };
 const T = {
-  en: { go: "Report flooding", photo: "📷 Take photo", textph: "Describe what you see", hint: "📍 Location set automatically. Tap the map to change.",
-    send: "Send", none: "No flooding near you", nexthigh: "Next high tide", warn: "Don't walk or drive through water", unconf: "Not confirmed yet",
+  en: { textph: "Report flooding: add a photo or describe what you see", hint: "📍 Your location · tap the map to change",
+    none: "No flooding near you", nexthigh: "Next high tide", warn: "Don't walk or drive through water", unconf: "Not confirmed yet",
     analyzing: "Analyzing...", unconfirmed: "Unconfirmed", sev: { none: "No", low: "Minor", moderate: "Moderate", severe: "Severe" },
     about: "about", in: "in", cars: "Cars can pass", nocars: "Cars can't pass",
     empty: "Add a photo or text.", noloc: "Location needed. Allow access or tap the map.", sending: "Sending...",
-    thanksPhoto: "Thanks! Checking your photo...", thanks: "Thanks! Checking your report...",
+    thanksPhoto: "Checking your photo...", thanks: "Checking your report...", failed: "Couldn't read this report. Please try again.",
     e400: "Add a photo or text.", e413: "Photo too large (max 10 MB).", e502: "AI failed, please try again.", eNet: "Network error, try again.",
     nomic: "Voice not supported here.", listening: "Listening..." },
-  es: { go: "Reportar inundación", photo: "📷 Tomar foto", textph: "Describa lo que ve", hint: "📍 Ubicación automática. Toque el mapa para cambiarla.",
-    send: "Enviar", none: "Sin inundación cerca de usted", nexthigh: "Próxima marea alta", warn: "No camine ni conduzca por el agua", unconf: "Aún sin confirmar",
+  es: { textph: "Reporte una inundación: agregue una foto o describa lo que ve", hint: "📍 Su ubicación · toque el mapa para cambiarla",
+    none: "Sin inundación cerca de usted", nexthigh: "Próxima marea alta", warn: "No camine ni conduzca por el agua", unconf: "Aún sin confirmar",
     analyzing: "Analizando...", unconfirmed: "Sin confirmar", sev: { none: "Sin", low: "Leve", moderate: "Moderada", severe: "Grave" },
     about: "aprox.", in: "pulg", cars: "Los autos pueden pasar", nocars: "Los autos no pueden pasar",
     empty: "Agregue una foto o texto.", noloc: "Se necesita ubicación. Permita acceso o toque el mapa.", sending: "Enviando...",
-    thanksPhoto: "¡Gracias! Revisando su foto...", thanks: "¡Gracias! Revisando su reporte...",
+    thanksPhoto: "Revisando su foto...", thanks: "Revisando su reporte...", failed: "No pudimos leer este reporte. Intente de nuevo.",
     e400: "Agregue una foto o texto.", e413: "Foto muy grande (máx. 10 MB).", e502: "Falló la IA, intente de nuevo.", eNet: "Error de red, intente de nuevo.",
     nomic: "Voz no disponible aquí.", listening: "Escuchando..." },
-  ht: { go: "Rapòte inondasyon", photo: "📷 Pran foto", textph: "Dekri sa ou wè", hint: "📍 Kote a mete otomatik. Touche kat la pou chanje l.",
-    send: "Voye", none: "Pa gen inondasyon toupre ou", nexthigh: "Pwochen mare wo", warn: "Pa mache ni kondui nan dlo a", unconf: "Poko konfime",
+  ht: { textph: "Rapòte inondasyon: ajoute yon foto oswa dekri sa ou wè", hint: "📍 Kote ou ye · touche kat la pou chanje l",
+    none: "Pa gen inondasyon toupre ou", nexthigh: "Pwochen mare wo", warn: "Pa mache ni kondui nan dlo a", unconf: "Poko konfime",
     analyzing: "Analiz...", unconfirmed: "Pa konfime", sev: { none: "Pa gen", low: "Ti", moderate: "Mwayen", severe: "Grav" },
     about: "anviwon", in: "pous", cars: "Machin ka pase", nocars: "Machin pa ka pase",
     empty: "Ajoute yon foto oswa tèks.", noloc: "Nou bezwen kote ou ye. Pèmèt aksè oswa touche kat la.", sending: "N ap voye...",
-    thanksPhoto: "Mèsi! N ap tcheke foto ou...", thanks: "Mèsi! N ap tcheke rapò ou...",
+    thanksPhoto: "N ap tcheke foto ou...", thanks: "N ap tcheke rapò ou...", failed: "Nou pa t ka li rapò sa a. Tanpri eseye ankò.",
     e400: "Ajoute yon foto oswa tèks.", e413: "Foto twò gwo (maks 10 MB).", e502: "IA a echwe, tanpri eseye ankò.", eNet: "Erè rezo, eseye ankò.",
     nomic: "Vwa pa sipòte isit la.", listening: "N ap koute..." },
 };
@@ -267,7 +294,11 @@ function drawStatus() {
 const get = u => fetch(u).then(r => r.ok ? r.json() : Promise.reject(r.status));
 async function poll() {
   const [r, a, d] = await Promise.allSettled([get("/api/reports?hours=24"), get("/api/alerts/latest"), get("/api/tide")]);
-  if (r.status === "fulfilled") { reports = r.value; drawReports(); }
+  if (r.status === "fulfilled") {
+    for (const x of r.value) if (pending[x.id] && x.status !== "analyzing") showResult(x);
+    reports = r.value.filter(x => x.status !== "failed");   // failed analyses never show on the map
+    drawReports();
+  }
   if (a.status === "fulfilled") lastAlert = a.value.alert;
   if (d.status === "fulfilled") lastTide = d.value;
   drawStatus();
@@ -287,67 +318,130 @@ navigator.geolocation?.watchPosition(p => {
 // --- language ---
 function applyLang() {
   document.documentElement.lang = lang;
-  $("go").textContent = t("go"); $("send").textContent = t("send"); $("photolbl").textContent = t("photo");
   $("textin").placeholder = t("textph"); $("hint").textContent = t("hint"); $("lang").value = lang;
   drawReports(); drawStatus();
 }
 $("lang").onchange = e => { lang = e.target.value; localStorage.lang = lang; applyLang(); };
 
-// --- report sheet ---
-function say(k, err) { $("msg").className = err ? "err" : ""; $("msg").textContent = k ? t(k) : ""; }
-$("go").onclick = () => { say(""); $("sheet").hidden = false; $("go").hidden = true; };
-function closeSheet() {
-  $("sheet").hidden = true; $("go").hidden = false;
-  if (pickMarker) { map.removeLayer(pickMarker); pickMarker = null; repPos = me; }
-}
-$("x").onclick = closeSheet;
+// --- chat-style report box ---
+const ICON = {
+  mic: '<svg viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3"/></svg>',
+  send: '<svg viewBox="0 0 24 24"><path d="m5 12 7-7 7 7M12 19V5"/></svg>',
+  rec: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>',
+  sending: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>',
+};
+const pending = {};   // report id -> bubble element waiting for its analysis
+let file = null, recording = false, sending = false, rec = null, recText = "", timerId = null;
 
-map.on("click", e => {   // tap map to change report location (only while the sheet is open)
-  if ($("sheet").hidden) return;
+function bubble(html, err) {
+  const b = document.createElement("div");
+  b.className = "bub" + (err ? " err" : ""); b.innerHTML = html;
+  $("chat").append(b);
+  while ($("chat").children.length > 3) $("chat").firstChild.remove();
+  return b;
+}
+const spin = () => `<span class="spin"></span>`;
+
+function state() {
+  const has = $("textin").value.trim() !== "" || !!file;
+  const s = sending ? "sending" : recording ? "rec" : has ? "send" : "mic";
+  const m = $("main");
+  m.dataset.s = s; m.innerHTML = ICON[s]; 
+  $("box").classList.toggle("rec", recording);
+  $("textin").hidden = recording; $("recui").hidden = !recording;
+  $("thumbwrap").hidden = !file || recording;
+  $("textin").disabled = sending;
+}
+function grow() { const x = $("textin"); x.style.height = "auto"; x.style.height = Math.min(x.scrollHeight, 160) + "px"; }
+$("textin").oninput = () => { grow(); state(); };
+$("textin").onkeydown = e => { if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); submit(); } };
+
+$("attach").onclick = () => $("photo").click();
+$("photo").onchange = () => {
+  file = $("photo").files[0] || null;
+  if (file) $("thumb").src = URL.createObjectURL(file);
+  state();
+};
+$("rm").onclick = () => { file = null; $("photo").value = ""; state(); };
+
+map.on("click", e => {   // tap map to change the report location
   repPos = { lat: e.latlng.lat, lng: e.latlng.lng };
   if (pickMarker) pickMarker.setLatLng(e.latlng);
   else pickMarker = L.marker(e.latlng, { icon: dotIcon("pick"), interactive: false }).addTo(map);
 });
 
-$("photo").onchange = () => {
-  const f = $("photo").files[0];
-  $("photobtn").classList.toggle("on", !!f);
-  $("photolbl").textContent = f ? "✓ " + f.name : t("photo");
-};
-
+// voice -> text with the Web Speech API
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-$("mic").onclick = () => {
-  if (!SR) return say("nomic", true);
-  const rec = new SR();
+function startRec() {
+  if (!SR) return bubble(esc(t("nomic")), true);
+  rec = new SR();
   rec.lang = { en: "en-US", es: "es-US", ht: "fr-HT" }[lang];
-  rec.onresult = e => { $("textin").value = ($("textin").value + " " + e.results[0][0].transcript).trim(); };
-  rec.onend = () => { $("mic").classList.remove("on"); say(""); };
-  rec.start(); $("mic").classList.add("on"); say("listening");
+  rec.continuous = true; recText = "";
+  rec.onresult = e => { recText = [...e.results].map(r => r[0].transcript).join(" "); };
+  rec.onend = () => stopRec();
+  rec.onerror = () => stopRec();
+  rec.start(); recording = true;
+  $("bars").innerHTML = Array.from({ length: 28 }, (_, i) =>
+    `<i style="height:${15 + Math.random() * 85}%;animation-delay:${i * .05}s;animation-duration:${.5 + Math.random() * .5}s"></i>`).join("");
+  let sec = 0; $("tm").textContent = "00:00";
+  timerId = setInterval(() => { sec++; $("tm").textContent = String(sec / 60 | 0).padStart(2, "0") + ":" + String(sec % 60).padStart(2, "0"); }, 1000);
+  state();
+}
+function stopRec() {
+  if (!recording) return;
+  recording = false; clearInterval(timerId);
+  try { rec.stop(); } catch {}
+  if (recText.trim()) $("textin").value = ($("textin").value + " " + recText).trim();
+  grow(); state();
+}
+
+$("main").onclick = () => {
+  if (sending) return;
+  if (recording) return stopRec();
+  if ($("textin").value.trim() || file) submit(); else startRec();
 };
 
-$("sheet").onsubmit = async e => {
-  e.preventDefault();
-  const file = $("photo").files[0], text = $("textin").value.trim();
-  if (!file && !text) return say("empty", true);
-  if (!repPos) return say("noloc", true);
+async function submit() {
+  const text = $("textin").value.trim();
+  if (sending || recording || (!text && !file)) return;
+  if (!repPos) return bubble(esc(t("noloc")), true);
   const fd = new FormData();
   fd.append("lat", repPos.lat); fd.append("lng", repPos.lng); fd.append("reporter_id", reporterId);
   if (file) fd.append("photo", file);
   if (text) fd.append("text", text);
-  $("send").disabled = true;
-  $("msg").className = ""; $("msg").innerHTML = `<span class="spin"></span> ${t("sending")}`;
+  const sentPhoto = !!file;
+  sending = true; state();
   try {
     const r = await fetch("/api/reports", { method: "POST", body: fd });
-    if (!r.ok) return say({ 400: "e400", 413: "e413", 502: "e502" }[r.status] || "eNet", true);
-    say(file ? "thanksPhoto" : "thanks");
-    $("sheet").reset(); $("photobtn").classList.remove("on"); $("photolbl").textContent = t("photo");
+    if (!r.ok) return bubble(esc(t({ 400: "e400", 413: "e413", 502: "e502" }[r.status] || "eNet")), true);
+    const rep = (await r.json()).report;
+    pending[rep.id] = bubble(spin() + " " + esc(t(sentPhoto ? "thanksPhoto" : "thanks")));
+    $("textin").value = ""; file = null; $("photo").value = ""; grow();
+    if (pickMarker) { map.removeLayer(pickMarker); pickMarker = null; repPos = me; }
     poll();
-    setTimeout(closeSheet, 1500);
-  } catch { say("eNet", true); }
-  finally { $("send").disabled = false; }
-};
+  } catch { bubble(esc(t("eNet")), true); }
+  finally { sending = false; state(); }
+}
+
+// turn a finished analysis into a plain-language chat bubble
+function showResult(r) {
+  const b = pending[r.id]; delete pending[r.id];
+  if (r.status === "failed" || !r.analysis) { b.className = "bub err"; b.textContent = t("failed"); return; }
+  const a = r.analysis, sum = (a.summary && (a.summary[lang] || a.summary.en)) || "";
+  let h = "";
+  if (a.type !== "none" && a.is_disaster !== false) {
+    h = `<b style="color:${sevColor(a.severity)}">${esc(t("sev")[a.severity] || a.severity)} ${esc(ty(a.type, 2))}`;
+    if (a.type === "flood" && a.depth_in != null) h += ` · ${t("about")} ${esc(a.depth_in)} ${t("in")}`;
+    h += `</b>`;
+  }
+  if (sum) h += `<span class="sub">${esc(sum)}</span>`;
+  if (a.type === "flood" && a.car_passable != null) h += `<span class="sub">${a.car_passable ? t("cars") : t("nocars")}</span>`;
+  b.innerHTML = h || esc(t("failed"));
+  b.style.animation = "none"; void b.offsetWidth; b.style.animation = "";
+}
 
 applyLang();
+state();
 poll();
 setInterval(poll, 5000);
 </script>
