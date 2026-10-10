@@ -49,5 +49,5 @@ class PersonTracker:
                 if close and max(a["speed"],b["speed"]) > 40:
                     candidates.append({"ids":[ids[i],ids[j]],"reason":"fast nearby movement; not proof of hitting"})
         self.frames.append((t, image))
-        return {"people":[{"id":pid,"x":round(p["x"]),"y":round(p["y"])} for pid,p in updated.items()],
+        return {"people":[{"id":pid,"x":round((p["x"]-p["w"]/2)/small.shape[1],4),"y":round((p["y"]-p["h"]/2)/small.shape[0],4),"w":round(p["w"]/small.shape[1],4),"h":round(p["h"]/small.shape[0],4),"label":f"Person {pid}"} for pid,p in updated.items()],
                 "candidates":candidates, "frames_in_memory":len(self.frames)}
