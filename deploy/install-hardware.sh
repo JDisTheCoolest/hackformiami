@@ -9,6 +9,7 @@ if [[ ! -f /etc/hackformiami/hardware.env ]]; then
   sudo tee /etc/hackformiami/hardware.env >/dev/null <<'ENV'
 SERVER_URL=http://127.0.0.1:8000
 INTERVAL=10
+CAM_AI_ENABLED=0
 CAM_LAT=0
 CAM_LNG=0
 CAM_AREA=Unconfigured camera
@@ -17,7 +18,8 @@ SPEAK_LANGS=en
 POLL_SECONDS=5
 ENV
 fi
-sudo chmod 600 /etc/hackformiami/hardware.env
+sudo chmod 644 /etc/hackformiami/hardware.env
+# No API secrets belong in hardware.env; the manager reads this file to show settings.
 for unit in camera speaker; do
   sudo tee "/etc/systemd/system/hackformiami-$unit.service" >/dev/null <<EOF
 [Unit]
