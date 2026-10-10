@@ -206,6 +206,6 @@ def main():
 
 if __name__ == "__main__":
     if "--test" in __import__("sys").argv:
-        say("Alert! Alert! Possible fighting has been detected in the monitored area. Stop any physical confrontation immediately. Keep a safe distance. Do not approach or join the fight. Move away calmly and give others space. If someone is injured or in immediate danger, call emergency services or notify a responsible staff member. This is a test of the Four Forces fight alert system.", "en")
+        say("Alert! Alert! Possible fight detected. Stop fighting. Keep your distance and move to safety. Notify staff if anyone needs help. This is a test.", "en")
     else:
         main()
