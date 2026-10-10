@@ -12,7 +12,7 @@ case "$ACTION" in
     printf 'CAM_AI_ENABLED=%s\n' "$VALUE" >> "$tmp"
     cat "$tmp" > "$ENV"
     rm -f "$tmp"
-    chmod 600 "$ENV"
+    chmod 644 "$ENV"
     echo "Camera AI $([[ "$VALUE" == 1 ]] && echo enabled || echo paused)"
     ;;
   interval)
@@ -23,7 +23,7 @@ case "$ACTION" in
     printf 'INTERVAL=%s\n' "$SECONDS" >> "$tmp"
     cat "$tmp" > "$ENV"
     rm -f "$tmp"
-    chmod 600 "$ENV"
+    chmod 644 "$ENV"
     systemctl try-restart hackformiami-camera.service || true
     echo "Camera interval set to $SECONDS seconds"
     ;;
@@ -39,7 +39,7 @@ PY
     tmp=$(mktemp)
     grep -Ev "^(CAM_LAT|CAM_LNG|CAM_AREA)=" "$ENV" > "$tmp" || true
     printf 'CAM_LAT=%s\nCAM_LNG=%s\nCAM_AREA=%s\n' "$LAT" "$LNG" "$AREA" >> "$tmp"
-    cat "$tmp" > "$ENV"; rm -f "$tmp"; chmod 600 "$ENV"
+    cat "$tmp" > "$ENV"; rm -f "$tmp"; chmod 644 "$ENV"
     systemctl try-restart hackformiami-camera.service || true
     echo "Camera location saved"
     ;;
