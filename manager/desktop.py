@@ -64,20 +64,20 @@ class Manager(tk.Tk):
         self.configure(bg=BG)
         self.origin_mtime = SOURCE.stat().st_mtime_ns
         self.views = {}
-        self.selected = tk.StringVar(value="Dashboard")
+        self.selected = tk.StringVar(value="Overview")
         side = tk.Frame(self, bg="#0e1c2d", width=230)
         side.pack(side="left", fill="y")
         side.pack_propagate(False)
         tk.Label(side, text="⚡ HACK FOR MIAMI", bg="#0e1c2d", fg=ACCENT, font=("DejaVu Sans", 15, "bold")).pack(anchor="w", padx=20, pady=(27, 4))
         tk.Label(side, text="PRIVATE PI DESKTOP MANAGER", bg="#0e1c2d", fg=MUTED, font=("DejaVu Sans", 9)).pack(anchor="w", padx=20, pady=(0, 27))
-        for name in ("Dashboard", "Website & AI", "Events", "Content & Media", "Registrations", "Deployment", "Cloudflare", "Backups", "Settings"):
+        for name in ("Overview", "Website & API", "AI Analysis", "Reports & Alerts", "GitHub Updates", "Cloudflare"):
             tk.Button(side, text="  "+name, anchor="w", bg="#0e1c2d", fg=FG, activebackground="#22463f", activeforeground=FG,
                       relief="flat", bd=0, padx=13, pady=14, font=("DejaVu Sans", 11),
                       command=lambda n=name:self.show(n)).pack(fill="x", padx=9, pady=1)
         tk.Label(side,text="Local only • Pi Connect compatible",bg="#0e1c2d",fg=MUTED,font=("DejaVu Sans",9),wraplength=195).pack(side="bottom",padx=10,pady=23)
         self.content = tk.Frame(self, bg=BG)
         self.content.pack(side="left", fill="both", expand=True, padx=32, pady=28)
-        self.show("Dashboard")
+        self.show("Overview")
         self.after(1000, self.refresh)
 
     def clear(self):
@@ -90,31 +90,73 @@ class Manager(tk.Tk):
     def show(self, name):
         self.selected.set(name)
         self.clear()
-        if name == "Dashboard":
+        if name == "Overview":
             self.heading("Overview","Live Raspberry Pi and deployment diagnostics")
             self.data = tk.Frame(self.content,bg=BG)
             self.data.pack(fill="both",expand=True)
             self.render_data()
             tk.Button(self.content,text="Refresh now",command=self.render_data,bg="#176657",fg=FG,relief="flat",padx=20,pady=12).pack(anchor="w",pady=15)
-        elif name == "Website & AI":
+        elif name == "Website & API":
             self.site_screen()
-        elif name == "Deployment":
+        elif name == "GitHub Updates":
             self.heading("GitHub deployment","Automatic 30-second GitHub checks")
             self.data = tk.Frame(self.content,bg=BG)
             self.data.pack(fill="both",expand=True)
             self.render_data(keys=["Branch","Commit","Git changes","Update timer","Last update"])
             tk.Label(self.content,text="GitHub main is fast-forwarded when clean; no forced overwrite of local edits.",bg=BG,fg=MUTED,wraplength=650).pack(anchor="w")
+        elif name == "AI Analysis":
+            self.ai_screen()
+        elif name == "Reports & Alerts":
+            self.reports_screen()
         elif name == "Cloudflare":
             self.cloudflare_screen()
         else:
-            self.heading(name, "Organizer workspace")
+            self.heading(name, "Application manager")
             panel=tk.Frame(self.content,bg=PANEL,padx=28,pady=28)
             panel.pack(fill="x")
             tk.Label(panel,text=name+" is ready for future integration.",bg=PANEL,fg=FG,font=("DejaVu Sans",15,"bold")).pack(anchor="w")
             tk.Label(panel,text="This manager does not invent a backend or modify the HackForMiami website. This section will connect when the corresponding application module exists.",bg=PANEL,fg=MUTED,wraplength=600,justify="left").pack(anchor="w",pady=(12,0))
 
+    def api_summary(self, endpoint):
+        import json
+        from urllib.request import urlopen
+        try:
+            with urlopen("http://127.0.0.1:8000"+endpoint,timeout=4) as response:
+                return json.load(response)
+        except Exception as exc:
+            return {"error":str(exc)[:100]}
+
+    def ai_screen(self):
+        self.heading("AI Analysis", "Gemma report classification: flood, fire, storm damage, downed trees and power lines")
+        frame=tk.Frame(self.content,bg=PANEL,padx=24,pady=22)
+        frame.pack(fill="both",expand=True)
+        d=self.api_summary("/api/health")
+        if "error" in d:
+            message="Backend offline — install/start Website & API first."
+        else:
+            message=("MOCK mode: generated sample analyses — NOT live AI." if d.get("mock") else "AI key detected. API configuration enabled; model request not yet tested.")
+            message+=f"\\nConfigured model: {d.get('model','unknown')}"
+        tk.Label(frame,text=message,bg=PANEL,fg=ACCENT,font=("DejaVu Sans",12,"bold"),justify="left",wraplength=620).pack(anchor="w",pady=10)
+        tk.Label(frame,text="AI credentials must be stored only on this Pi in /etc/hackformiami/backend.env. A key present in a Git commit is considered compromised; revoke it and generate a replacement.",bg=PANEL,fg=MUTED,wraplength=640,justify="left").pack(anchor="w",pady=12)
+        tk.Button(frame,text="Recheck AI connection",command=self.ai_screen,bg=PANEL2,fg=FG,relief="flat",padx=14,pady=9).pack(anchor="w",pady=12)
+
+    def reports_screen(self):
+        self.heading("Reports & Alerts", "Read-only view of real FastAPI reporting endpoints")
+        frame=tk.Frame(self.content,bg=PANEL,padx=24,pady=22)
+        frame.pack(fill="both",expand=True)
+        for label,url in (("LATEST ALERT","/api/alerts/latest"),("REPORTS (24 HOURS)","/api/reports?hours=24"),("TIDE STATION","/api/tide")):
+            data=self.api_summary(url)
+            if "error" in data: value="Unavailable — backend offline or API error"
+            elif isinstance(data,list):value=f"{len(data)} reports returned"
+            elif label=="LATEST ALERT":value="No current alert" if not data.get("alert") else str(data["alert"])[:300]
+            elif label=="TIDE STATION":value=str(data)[:300]
+            else:value=str(data)[:300]
+            tk.Label(frame,text=label,bg=PANEL,fg=MUTED,font=("DejaVu Sans",10,"bold")).pack(anchor="w",pady=(12,4))
+            tk.Label(frame,text=value,bg=PANEL,fg=FG,wraplength=610,justify="left").pack(anchor="w")
+        tk.Button(frame,text="Refresh live data",command=self.reports_screen,bg=PANEL2,fg=FG,relief="flat",padx=14,pady=9).pack(anchor="w",pady=14)
+
     def site_screen(self):
-        self.heading("Website & AI", "Run the Vite website, FastAPI endpoints and Gemma analysis on this Pi")
+        self.heading("Website & API", "Run the Vite website, FastAPI endpoints and Gemma analysis on this Pi")
         area=tk.Frame(self.content,bg=PANEL,padx=24,pady=22)
         area.pack(fill="both",expand=True)
         self.site_status=tk.StringVar(value="Checking backend and model configuration...")
@@ -138,7 +180,7 @@ class Manager(tk.Tk):
                 output=f"Website/API service: {status} | API: healthy | AI mode: {'MOCK (no key)' if d.get('mock') else 'Configured ('+str(d.get('model'))+')'}"
             except Exception as e:
                 output=f"Website/API service: {status} | API unreachable: {str(e)[:100]}"
-            self.after(0,lambda:self.site_status.set(output) if self.selected.get()=="Website & AI" else None)
+            self.after(0,lambda:self.site_status.set(output) if self.selected.get()=="Website & API" else None)
         threading.Thread(target=worker,daemon=True).start()
 
     def install_site(self):
@@ -226,7 +268,7 @@ class Manager(tk.Tk):
                 self.destroy()
                 os.execv(sys.executable, [sys.executable, str(SOURCE)])
                 return
-            if self.selected.get() in ("Dashboard","Deployment","Cloudflare"): self.render_data()
+            if self.selected.get() in ("Overview","GitHub Updates","Cloudflare"): self.render_data()
         except OSError: pass
         self.after(15000,self.refresh)
 
